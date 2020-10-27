@@ -1,60 +1,84 @@
 {
   "name": "wennect-frontend",
   "version": "0.1.0",
+  "description": "The communication application which connect with us using WebRTC",
+  "author": "danivelop <https://github.com/danivelop>",
   "private": true,
+  "keywords": [
+    "webRTC",
+    "react"
+  ],
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/danivelop/wennect-frontend.git"
+  },
+  "bugs": {
+    "url": "https://github.com/danivelop/wennect-frontend/issues"
+  },
   "dependencies": {
-    "@reduxjs/toolkit": "1.3.2",
-    "@testing-library/jest-dom": "5.1.1",
-    "@testing-library/react": "10.0.1",
-    "@types/fontfaceobserver": "0.0.6",
-    "@types/jest": "25.1.4",
-    "@types/node": "13.9.3",
-    "@types/react": "16.9.25",
-    "@types/react-dom": "16.9.3",
-    "@types/react-helmet": "5.0.15",
-    "@types/react-redux": "7.1.7",
-    "@types/react-router-dom": "5.1.3",
-    "@types/react-test-renderer": "16.9.2",
-    "@types/styled-components": "5.0.1",
-    "@types/testing-library__jest-dom": "5.0.2",
-    "@types/webpack-env": "1.15.1",
+    "axios": "0.21.0",
+    "classnames": "2.2.6",
     "cross-env": "7.0.2",
-    "eslint-config-prettier": "6.10.1",
-    "eslint-plugin-prettier": "3.1.2",
     "fontfaceobserver": "2.1.0",
-    "husky": "4.2.3",
-    "i18next": "19.3.4",
-    "i18next-browser-languagedetector": "4.0.2",
-    "jest-styled-components": "7.0.2",
-    "lint-staged": "10.0.8",
-    "node-plop": "0.25.0",
-    "plop": "2.6.0",
-    "prettier": "2.0.1",
-    "react": "16.13.0",
-    "react-app-polyfill": "1.0.6",
-    "react-dom": "16.13.0",
-    "react-helmet-async": "1.0.4",
-    "react-i18next": "11.3.4",
-    "react-redux": "7.2.0",
-    "react-router-dom": "5.1.2",
+    "husky": "4.3.0",
+    "immutable": "4.0.0-rc.12",
+    "ismobilejs": "1.1.1",
+    "lodash": "4.17.20",
+    "moment": "2.29.1",
+    "node-plop": "0.26.2",
+    "node-sass": "4.14.1",
+    "platform": "1.3.6",
+    "plop": "2.7.4",
+    "react": "17.0.1",
+    "react-app-polyfill": "2.0.0",
+    "react-dom": "17.0.1",
+    "react-helmet-async": "1.0.7",
+    "react-lottie": "1.2.3",
+    "react-redux": "7.2.2",
+    "react-router-dom": "5.2.0",
     "react-scripts": "4.0.0",
-    "react-test-renderer": "16.13.0",
-    "redux-injectors": "1.3.0",
+    "react-test-renderer": "17.0.1",
+    "redux": "4.0.5",
     "redux-saga": "1.1.3",
-    "replace-in-file": "6.0.0",
-    "sanitize.css": "11.0.0",
-    "serve": "11.3.0",
-    "shelljs": "0.8.3",
-    "styled-components": "5.0.1",
-    "stylelint": "13.2.1",
+    "reselect": "4.0.0",
+    "sanitize.css": "12.0.1",
+    "serve": "11.3.2",
+    "shelljs": "0.8.4",
+    "styled-components": "5.2.0",
+    "ts-node": "9.0.0",
+    "typescript": "4.0.5"
+  },
+  "devDependencies": {
+    "@testing-library/jest-dom": "5.11.5",
+    "@testing-library/react": "11.1.0",
+    "@types/classnames": "2.2.10",
+    "@types/fontfaceobserver": "0.0.6",
+    "@types/jest": "26.0.15",
+    "@types/lodash": "4.14.162",
+    "@types/node": "14.14.5",
+    "@types/platform": "1.3.3",
+    "@types/react": "16.9.53",
+    "@types/react-dom": "16.9.8",
+    "@types/react-helmet": "6.1.0",
+    "@types/react-redux": "7.1.9",
+    "@types/react-router-dom": "5.1.6",
+    "@types/react-test-renderer": "16.9.3",
+    "@types/styled-components": "5.1.4",
+    "@types/testing-library__jest-dom": "5.9.5",
+    "@types/webpack-env": "1.15.3",
+    "eslint-config-prettier": "6.15.0",
+    "eslint-plugin-prettier": "3.1.4",
+    "jest-styled-components": "7.0.3",
+    "lint-staged": "10.5.0",
+    "prettier": "2.1.2",
+    "stylelint": "13.7.2",
     "stylelint-config-recommended": "3.0.0",
     "stylelint-config-styled-components": "0.1.1",
-    "stylelint-processor-styled-components": "1.10.0",
-    "ts-node": "8.8.2",
-    "typescript": "3.8.2"
+    "stylelint-processor-styled-components": "1.10.0"
   },
   "scripts": {
     "start": "react-scripts start",
+    "start:https": "HTTPS=true npm run start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
@@ -66,11 +90,7 @@
     "lint:fix": "npm run eslint -- --fix src",
     "lint:css": "stylelint src/**/*.css",
     "generate": "cross-env TS_NODE_PROJECT='./internals/ts-node.tsconfig.json' plop --plopfile internals/generators/plopfile.ts",
-    "cleanAndSetup": "ts-node --project=./internals/ts-node.tsconfig.json ./internals/scripts/clean.ts",
     "prettify": "prettier --write"
-  },
-  "eslintConfig": {
-    "extends": "react-app"
   },
   "browserslist": {
     "production": [
@@ -90,13 +110,14 @@
   },
   "lint-staged": {
     "*.{ts,tsx,js,jsx}": [
-      "npm run eslint -- --fix"
+      "npm run eslint",
+      "npm run lint:css"
     ],
-    "*.{md,json}": [
+    "*.json": [
       "prettier --write"
     ]
   },
-  "husky(remove-everything-in-these-parentheses.See-the-issue-#29)": {
+  "husky": {
     "hooks": {
       "pre-commit": "npm run checkTs && lint-staged"
     }
