@@ -1,7 +1,17 @@
 {
   "processors": ["stylelint-processor-styled-components"],
+  "plugins": ["stylelint-scss", "stylelint-order"],
   "extends": [
     "stylelint-config-recommended",
     "stylelint-config-styled-components"
-  ]
+  ],
+  "rules": {
+    "at-rule-no-unknown": null,
+    "scss/at-rule-no-unknown": true,
+    "order/properties-alphabetical-order": true,
+    "no-empty-source": null,
+    "rule-empty-line-before": null,
+    "selector-list-comma-newline-after": null,
+    "no-descending-specificity": null
+  }
 }
