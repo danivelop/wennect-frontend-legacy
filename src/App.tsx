@@ -1,15 +1,21 @@
 /* External dependencies */
 import React from 'react'
-import { Route, Switch } from 'react-router-dom'
+import { BrowserRouter, Route, Switch } from 'react-router-dom'
 
 /* Internal dependencies */
-import { MainPage } from 'pages'
+import { SigninPage, MainPage, SignupPage } from 'pages'
+import { GlobalStyle } from 'styles/global-styles'
 
 function App() {
   return (
-    <Switch>
-      <Route exact path="/" component={MainPage} />
-    </Switch>
+    <BrowserRouter>
+      <Switch>
+        <Route exact path="/" component={MainPage} />
+        <Route exact path="/signin" component={SigninPage} />
+        <Route exact path="/signup" component={SignupPage} />
+      </Switch>
+      <GlobalStyle />
+    </BrowserRouter>
   )
 }
 

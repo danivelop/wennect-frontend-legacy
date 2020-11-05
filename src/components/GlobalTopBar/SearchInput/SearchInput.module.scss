@@ -9,6 +9,9 @@
 
   &.isFocus {
     width: 400px;
+  }
+  &.overInterval {
+    background-color: $oc-gray-1;
 
     .search-input {
       color: $oc-gray-9;

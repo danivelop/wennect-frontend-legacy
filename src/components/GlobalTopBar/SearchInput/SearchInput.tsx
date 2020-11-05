@@ -1,5 +1,5 @@
 /* External dependencies */
-import React, { useState, useCallback, useRef } from 'react'
+import React, { useState, useCallback } from 'react'
 import classNames from 'classnames/bind'
 
 /* Internal dependencies */
@@ -7,10 +7,12 @@ import styles from './SearchInput.module.scss'
 
 const cx = classNames.bind(styles)
 
+const INPUT__DURATION = 200
+
 function SearchInput() {
-  const inputWrapperRef = useRef<HTMLInputElement>(null)
   const [query, setQuery] = useState<string>('')
   const [isFocus, setIsFocus] = useState<boolean>(false)
+  const [overInterval, setOverInterval] = useState<boolean>(false)
 
   const handleChangeInput = useCallback(
     (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -22,25 +24,18 @@ function SearchInput() {
 
   const handleFocus = useCallback(() => {
     setIsFocus(true)
-    if (inputWrapperRef.current) {
-      inputWrapperRef.current.style.backgroundColor = '#f1f3f5'
-    }
+    setOverInterval(true)
   }, [])
 
   const handleBlur = useCallback(() => {
     setIsFocus(false)
     setTimeout(() => {
-      if (inputWrapperRef.current) {
-        inputWrapperRef.current.style.backgroundColor = 'unset'
-      }
-    }, 200)
+      setOverInterval(false)
+    }, INPUT__DURATION)
   }, [])
 
   return (
-    <div
-      className={cx('search-input-wrapper', { isFocus })}
-      ref={inputWrapperRef}
-    >
+    <div className={cx('search-input-wrapper', { isFocus, overInterval })}>
       <input
         className={cx('search-input')}
         type="text"

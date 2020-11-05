@@ -20,6 +20,7 @@
     "classnames": "2.2.6",
     "cross-env": "7.0.2",
     "fontfaceobserver": "2.1.0",
+    "formik": "2.2.1",
     "husky": "4.3.0",
     "immutable": "4.0.0-rc.12",
     "ismobilejs": "1.1.1",
@@ -141,5 +142,6 @@
         "statements": 90
       }
     }
-  }
+  },
+  "proxy": "http://localhost:4000"
 }
