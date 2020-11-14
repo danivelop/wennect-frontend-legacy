@@ -6,26 +6,27 @@ export interface StyledOverlayProps {
 }
 
 export const Container = styled.div`
-  bottom: 0;
+  width: 100%;
   height: 100%;
-  left: 0;
   position: fixed;
+  bottom: 0;
+  left: 0;
   right: 0;
   top: 0;
-  width: 100%;
 `
 
 export const Wrapper = styled.div`
+  width: 100%;
   height: 100%;
   position: relative;
-  width: 100%;
 `
 
 export const StyledOverlay = styled.div<StyledOverlayProps>`
+  position: absolute;
+
   ${props =>
     props.isHidden &&
     css`
       visibility: hidden;
     `}
-  position: absolute;
 `

@@ -8,6 +8,7 @@ import _ from 'lodash'
 
 /* Internal dependencies */
 import { signin } from 'modules/reducers/authReducer'
+import Button from 'elements/Button'
 import styles from './Signin.module.scss'
 
 interface SigninForm {
@@ -53,28 +54,37 @@ function Signin() {
       <h2>Sign in to Wennect</h2>
       <div className={cx('signin-form')}>
         <Formik {...formikConfig.current}>
-          <Form>
-            <div className={cx('field')}>
-              <p className={cx('label')}>Username</p>
-              <Field
-                className={cx('input')}
-                name="username"
-                type="text"
-                placeholder=""
-              />
-            </div>
-            <div className={cx('field')}>
-              <p className={cx('label')}>Password</p>
-              <Field
-                className={cx('input')}
-                name="password"
-                type="password"
-                autoComplete="off"
-                placeholder=""
-              />
-            </div>
-            <button type="submit">Sign in</button>
-          </Form>
+          {({ dirty, isSubmitting }) => (
+            <Form>
+              <div className={cx('field')}>
+                <p className={cx('label')}>Username</p>
+                <Field
+                  className={cx('input')}
+                  name="username"
+                  type="text"
+                  placeholder=""
+                />
+              </div>
+              <div className={cx('field')}>
+                <p className={cx('label')}>Password</p>
+                <Field
+                  className={cx('input')}
+                  name="password"
+                  type="password"
+                  autoComplete="off"
+                  placeholder=""
+                />
+              </div>
+              <Button
+                className={cx('submit-button')}
+                disabled={!dirty}
+                loading={isSubmitting}
+                type="submit"
+              >
+                Sign in
+              </Button>
+            </Form>
+          )}
         </Formik>
       </div>
     </div>

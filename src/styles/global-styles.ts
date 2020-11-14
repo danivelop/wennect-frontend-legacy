@@ -14,12 +14,12 @@ export const GlobalStyle = createGlobalStyle`
   figure, figcaption, footer, header, hgroup, 
   menu, nav, output, ruby, section, summary,
   time, mark, audio, video {
-    border: 0;
-    font: inherit;
-    font-size: 100%;
     margin: 0;
     padding: 0;
+    font: inherit;
+    font-size: 100%;
     vertical-align: baseline;
+    border: 0;
   }
 
   article, aside, details, figcaption, figure, 
@@ -45,8 +45,8 @@ export const GlobalStyle = createGlobalStyle`
     border-spacing: 0;
   }
   a {
-    color: inherit;
     display: block;
+    color: inherit;
     text-decoration: none;
   }
 `
