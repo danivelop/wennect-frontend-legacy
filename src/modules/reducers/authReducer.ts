@@ -33,12 +33,12 @@ interface State {
   getLoggedInError: boolean
 }
 
-export interface signinPayload {
+export interface SigninPayload {
   username: string
   password: string
 }
 
-export interface signupPayload {
+export interface SignupPayload {
   username: string
   password: string
 }
@@ -60,11 +60,11 @@ const GET_LOGGED_IN_FETCHING = 'auth/GET_LOGGED_IN_FETCHING' as const
 const GET_LOGGED_IN_SUCCESS = 'auth/GET_LOGGED_IN_SUCCESS' as const
 const GET_LOGGED_IN_ERROR = 'auth/GET_LOGGED_IN_ERROR' as const
 
-export const signin = actionCreator<signinPayload>(SIGNIN, {
+export const signin = actionCreator<SigninPayload>(SIGNIN, {
   usePromise: true,
 })
 
-export const signup = actionCreator<signinPayload>(SIGNUP, {
+export const signup = actionCreator<SigninPayload>(SIGNUP, {
   usePromise: true,
 })
 
@@ -83,7 +83,7 @@ const {
   SIGNIN_FETCHING,
   SIGNIN_SUCCESS,
   SIGNIN_ERROR,
-)<ReturnType<typeof signin>, authAPI.signinResponseType, any>(authAPI.signin)
+)<ReturnType<typeof signin>, authAPI.SigninResponseType, any>(authAPI.signin)
 
 const {
   asyncActions: signupAsyncActions,
@@ -92,7 +92,7 @@ const {
   SIGNUP_FETCHING,
   SIGNUP_SUCCESS,
   SIGNUP_ERROR,
-)<ReturnType<typeof signup>, authAPI.signupResponseType, any>(authAPI.signup)
+)<ReturnType<typeof signup>, authAPI.SignupResponseType, any>(authAPI.signup)
 
 const {
   asyncActions: signoutAsyncActions,
@@ -110,7 +110,7 @@ const {
   GET_LOGGED_IN_FETCHING,
   GET_LOGGED_IN_SUCCESS,
   GET_LOGGED_IN_ERROR,
-)<ReturnType<typeof getLoggedIn>, authAPI.getLoggedInResponseType, any>(
+)<ReturnType<typeof getLoggedIn>, authAPI.GetLoggedInResponseType, any>(
   authAPI.getLoggedIn,
 )
 

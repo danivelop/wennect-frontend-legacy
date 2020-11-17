@@ -9,30 +9,30 @@ interface User {
   username: string
 }
 
-export interface signinResponseType {
+export interface SigninResponseType {
   user: User
   isLoggedIn: boolean
   message?: string
 }
 
-export interface signupResponseType {
+export interface SignupResponseType {
   message?: string
 }
 
-export interface getLoggedInResponseType {
+export interface GetLoggedInResponseType {
   user: User
   isLoggedIn: boolean
   message?: string
 }
 
-export const signin: ResponseType<signinResponseType> = ({
+export const signin: ResponseType<SigninResponseType> = ({
   username,
   password,
 }) => {
   return axios.post('/api/auth/signin', { username, password })
 }
 
-export const signup: ResponseType<signupResponseType> = ({
+export const signup: ResponseType<SignupResponseType> = ({
   username,
   password,
 }) => {
@@ -43,6 +43,6 @@ export const signout: ResponseType<{}> = () => {
   return axios.post('/api/auth/signout')
 }
 
-export const getLoggedIn: ResponseType<getLoggedInResponseType> = () => {
+export const getLoggedIn: ResponseType<GetLoggedInResponseType> = () => {
   return axios.post('/api/auth/isLoggedIn')
 }

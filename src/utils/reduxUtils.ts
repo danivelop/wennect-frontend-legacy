@@ -1,6 +1,11 @@
 /* External dependencies */
+import { eventChannel, buffers, Buffer } from 'redux-saga'
 import { call, put } from 'redux-saga/effects'
 import _ from 'lodash'
+
+/* Internal dependencies */
+import SockerService from 'services/SocketService'
+import SocketEvent from 'constants/SocketEvent'
 
 export type AsyncActionTypes<
   T extends { [K in keyof T]: (...args: any[]) => any }
@@ -84,4 +89,18 @@ export const createAsyncActionsAndSaga = <F, S, E>(
   }
 
   return { asyncActions, asyncSaga }
+}
+
+export function createSocketChannel<T>(
+  eventType: SocketEvent,
+  buffer: Buffer<T>,
+) {
+  return eventChannel(emit => {
+    const emitter = (message: T) => emit(message)
+
+    SockerService.on(eventType, emitter)
+    return function unsubscribe() {
+      SockerService.off(eventType, emitter)
+    }
+  }, buffer || buffers.none())
 }
