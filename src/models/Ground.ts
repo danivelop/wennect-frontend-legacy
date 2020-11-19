@@ -1,27 +1,57 @@
 /* External dependencies */
 import Immutable from 'immutable'
+import _ from 'lodash'
 
 /* Internal dependencies */
 import PeerConnection from 'models/PeerConnection'
 
 export interface GroundAttr {
   localStream: MediaStream | null
-  constraints: MediaStreamConstraints
   peerConnections: Immutable.List<PeerConnection>
 }
 
 const GroundRecord = Immutable.Record<GroundAttr>({
   localStream: null,
-  constraints: {
-    video: true,
-    audio: true,
-  },
   peerConnections: Immutable.List(),
 })
 
 class Ground extends GroundRecord {
   constructor(args: any = {}) {
     super(args)
+  }
+
+  setVideo(enabled: boolean) {
+    if (_.isNil(this.localStream)) {
+      return console.log('No local video available.')
+    }
+    const videoTracks: MediaStreamTrack[] = this.localStream.getVideoTracks()
+
+    if (_.isEmpty(videoTracks)) {
+      return console.log('No local video available.')
+    }
+
+    for (let i = 0; i < videoTracks.length; i++) {
+      videoTracks[i].enabled = enabled
+    }
+  }
+
+  setAudio(enabled: boolean) {
+    if (_.isNil(this.localStream)) {
+      return console.log('No local audio available.')
+    }
+    const audioTracks: MediaStreamTrack[] = this.localStream.getAudioTracks()
+
+    if (_.isEmpty(audioTracks)) {
+      return console.log('No local audio available.')
+    }
+
+    for (let i = 0; i < audioTracks.length; i++) {
+      audioTracks[i].enabled = enabled
+    }
+  }
+
+  hangUp() {
+    this.localStream?.getTracks().forEach(track => track.stop())
   }
 }
 

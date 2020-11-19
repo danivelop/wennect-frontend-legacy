@@ -5,14 +5,12 @@ import Immutable from 'immutable'
 
 export interface PeerConnectionAttr {
   remoteStream: MediaStream | null
-  localPeerConnection: RTCPeerConnection | null
-  remotePeerConnection: RTCPeerConnection | null
+  peerConnection: RTCPeerConnection | null
 }
 
 const PeerConnectionRecord = Immutable.Record<PeerConnectionAttr>({
   remoteStream: null,
-  localPeerConnection: null,
-  remotePeerConnection: null,
+  peerConnection: null,
 })
 
 class PeerConnection extends PeerConnectionRecord {

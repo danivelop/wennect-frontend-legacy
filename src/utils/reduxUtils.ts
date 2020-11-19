@@ -20,8 +20,8 @@ export interface LifeCycle {
   reject?: any
 }
 
-export interface ActionType<T, S = {}> {
-  type: string
+export interface ActionType<T, S = {}, AT = string> {
+  type: AT
   payload: T
   meta: S & LifeCycle
   promise?: Promise<any>
@@ -34,26 +34,24 @@ export type ActionGenerator<T, S> = (
 
 export type ResponseType<T> = (...args: any[]) => Promise<T>
 
-export function actionCreator<T = {}, S = {}>(
+export const actionCreator = <T = {}, S = {}>(
   actionType: string,
   option: OptionType = {},
-): ActionGenerator<T, S> {
-  return (payload: any = {}, meta: any = {}) => {
-    const action = {
-      type: actionType,
-      payload,
-      meta,
-    }
-    if (option.usePromise) {
-      const promise = new Promise((resolve, reject) => {
-        _.set(action, ['meta', 'resolve'], resolve)
-        _.set(action, ['meta', 'reject'], reject)
-      })
-      _.set(action, 'promise', promise)
-    }
-
-    return action
+): ActionGenerator<T, S> => (payload: any = {}, meta: any = {}) => {
+  const action = {
+    type: actionType,
+    payload,
+    meta,
   }
+  if (option.usePromise) {
+    const promise = new Promise((resolve, reject) => {
+      _.set(action, ['meta', 'resolve'], resolve)
+      _.set(action, ['meta', 'reject'], reject)
+    })
+    _.set(action, 'promise', promise)
+  }
+
+  return action
 }
 
 export const createAsyncActionsAndSaga = <F, S, E>(
@@ -91,12 +89,12 @@ export const createAsyncActionsAndSaga = <F, S, E>(
   return { asyncActions, asyncSaga }
 }
 
-export function createSocketChannel<T>(
+export function createSocketChannel<T = any>(
   eventType: SocketEvent,
-  buffer: Buffer<T>,
+  buffer?: Buffer<T>,
 ) {
   return eventChannel(emit => {
-    const emitter = (message: T) => emit(message)
+    const emitter = (response: T) => emit(response)
 
     SockerService.on(eventType, emitter)
     return function unsubscribe() {

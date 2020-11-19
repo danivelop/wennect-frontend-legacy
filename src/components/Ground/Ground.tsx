@@ -1,10 +1,15 @@
 /* External dependencies */
 import React, { useEffect, useCallback, useState, useRef } from 'react'
 import { useHistory } from 'react-router-dom'
+import { useDispatch, useSelector } from 'react-redux'
 import classNames from 'classnames/bind'
+import _ from 'lodash'
 
 /* Internal dependencies */
-import WebRTC from 'services/WebRTCService'
+import { createGround } from 'modules/reducers/groundReducer'
+import { getGround, getLocalStream } from 'modules/selectors/groundSelector'
+import SocketService from 'services/SocketService'
+import SocketEvent from 'constants/SocketEvent'
 import Button, { Shape } from 'elements/Button'
 import SVGIcon, { Size } from 'elements/SVGIcon'
 import styles from './Ground.module.scss'
@@ -16,49 +21,63 @@ interface GroundProps {
 const cx = classNames.bind(styles)
 
 function Ground({ roomId }: GroundProps) {
+  const dispatch = useDispatch()
   const history = useHistory()
 
+  const ground = useSelector(getGround)
+  const localStream = useSelector(getLocalStream)
+
   const localVideoRef = useRef<HTMLVideoElement>(null)
-  const webRTC = useRef<WebRTC>()
 
   const [enableVideo, setEnableVideo] = useState(true)
   const [enableAudio, setEnableAudio] = useState(true)
 
   const toggleVideo = useCallback(async () => {
-    webRTC.current?.setVideo(!enableVideo)
+    if (_.isNil(ground)) return
+
+    ground.setVideo(!enableVideo)
     setEnableVideo(prev => !prev)
-  }, [enableVideo])
+  }, [ground, enableVideo])
 
   const toggleAudio = useCallback(() => {
-    webRTC.current?.setAudio(!enableAudio)
+    if (_.isNil(ground)) return
+
+    ground.setAudio(!enableAudio)
     setEnableAudio(prev => !prev)
-  }, [enableAudio])
+  }, [ground, enableAudio])
 
   const handleHangUp = useCallback(() => {
-    webRTC.current?.hangUp()
-    webRTC.current = undefined
     history.goBack()
   }, [history])
 
   useEffect(() => {
     ;(async () => {
       try {
-        webRTC.current = new WebRTC({
-          videoElement: localVideoRef.current,
-          enableVideo: true,
-          enableAudio: true,
+        const mediaStream = await navigator.mediaDevices.getUserMedia({
+          video: true,
+          audio: true,
         })
-        await webRTC.current.getLocalMediaStream()
+
+        dispatch(createGround({ localStream: mediaStream }))
       } catch (error) {
         console.error(error)
       }
     })()
+  }, [dispatch])
 
-    return function cleanUp() {
-      webRTC.current?.hangUp()
-      webRTC.current = undefined
+  useEffect(() => {
+    SocketService.emit(SocketEvent.EnterGround, roomId)
+
+    return function cleanup() {
+      SocketService.emit(SocketEvent.LeaveGround, roomId)
     }
-  }, [handleHangUp])
+  }, [roomId])
+
+  useEffect(() => {
+    if (!_.isNil(localStream) && localVideoRef.current) {
+      localVideoRef.current.srcObject = localStream
+    }
+  }, [localStream])
 
   return (
     <div className={cx('ground-container')}>
