@@ -3,6 +3,7 @@ import { call, take, fork, put, select, takeLatest } from 'redux-saga/effects'
 
 /* Internal dependencies */
 import Ground from 'models/Ground'
+import PeerConnection from 'models/PeerConnection'
 import { getGround } from 'modules/selectors/groundSelector'
 import SocketEvent from 'constants/SocketEvent'
 import { ActionType, createSocketChannel } from 'utils/reduxUtils'
@@ -12,10 +13,9 @@ type Action =
   | ActionType<CreateGroundPayload, {}, typeof CREATE_GROUND>
   | ActionType<undefined, {}, typeof CLEAR_GROUND>
   | ActionType<CreatePeerConnectionPayload, {}, typeof CREATE_PEER_CONNECTION>
-  | ActionType<SetRemoteStreamPayload, {}, typeof SET_REMOTE_STREAM>
 
 interface State {
-  ground: Ground | null
+  ground: Ground
 }
 
 interface CreateGroundPayload {
@@ -27,16 +27,11 @@ interface CreatePeerConnectionPayload {
   peerConnection: RTCPeerConnection
 }
 
-interface SetRemoteStreamPayload {
-  remoteStream: MediaStream
-}
-
 const ENTER_GROUND = 'ground/ENTER_GROUND' as const
 const CREATE_GROUND = 'ground/CREATE_GROUND' as const
 const LEAVE_GROUND = 'ground/LEAVE_GROUND' as const
 const CLEAR_GROUND = 'ground/CLEAR_GROUND' as const
 const CREATE_PEER_CONNECTION = 'ground/CREATE_PEER_CONNECTION' as const
-const SET_REMOTE_STREAM = 'ground/SET_REMOTE_STREAM' as const
 
 export const enterGround = actionCreator(ENTER_GROUND)
 export const createGround = actionCreator<CreateGroundPayload>(CREATE_GROUND)
@@ -44,9 +39,6 @@ export const leaveGround = actionCreator(LEAVE_GROUND)
 export const clearGround = actionCreator(CLEAR_GROUND)
 export const createPeerConnection = actionCreator<CreatePeerConnectionPayload>(
   CREATE_PEER_CONNECTION,
-)
-export const setRemoteStream = actionCreator<SetRemoteStreamPayload>(
-  SET_REMOTE_STREAM,
 )
 
 function* enterGroundSaga() {
@@ -90,7 +82,7 @@ export function* groundSaga() {
 }
 
 const initialState: State = {
-  ground: null,
+  ground: new Ground(),
 }
 
 function groundReducer(state: State = initialState, action: Action) {
@@ -104,7 +96,21 @@ function groundReducer(state: State = initialState, action: Action) {
     case CLEAR_GROUND:
       return {
         ...state,
-        ground: null,
+        ground: new Ground(),
+      }
+    case CREATE_PEER_CONNECTION:
+      const { remoteId, peerConnection } = action.payload
+      return {
+        ...state,
+        ground: state.ground.update('peerConnections', peerConnections =>
+          peerConnections.push(
+            new PeerConnection({
+              remoteId,
+              remoteStream: null,
+              peerConnection,
+            }),
+          ),
+        ),
       }
     default:
       return state
