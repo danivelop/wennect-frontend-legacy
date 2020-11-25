@@ -6,7 +6,7 @@ import classNames from 'classnames/bind'
 import _ from 'lodash'
 
 /* Internal dependencies */
-import { createGround } from 'modules/reducers/groundReducer'
+import { enterGround, leaveGround } from 'modules/reducers/groundReducer'
 import { getGround, getLocalStream } from 'modules/selectors/groundSelector'
 import SocketService from 'services/SocketService'
 import SocketEvent from 'constants/SocketEvent'
@@ -51,27 +51,14 @@ function Ground({ roomId }: GroundProps) {
   }, [history])
 
   useEffect(() => {
-    ;(async () => {
-      try {
-        const mediaStream = await navigator.mediaDevices.getUserMedia({
-          video: true,
-          audio: true,
-        })
-
-        dispatch(createGround({ localStream: mediaStream }))
-      } catch (error) {
-        console.error(error)
-      }
-    })()
-  }, [dispatch])
-
-  useEffect(() => {
     SocketService.emit(SocketEvent.EnterGround, roomId)
+    dispatch(enterGround())
 
     return function cleanup() {
       SocketService.emit(SocketEvent.LeaveGround, roomId)
+      dispatch(leaveGround())
     }
-  }, [roomId])
+  }, [roomId, dispatch])
 
   useEffect(() => {
     if (!_.isNil(localStream) && localVideoRef.current) {

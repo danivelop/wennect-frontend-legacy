@@ -26,7 +26,7 @@ function Signin() {
     async (values: SigninForm, { setSubmitting }) => {
       try {
         await dispatch(signin(values)).promise
-        history.push('/')
+        history.push('/ground')
       } catch (error) {
         const message = _.get(
           error,

@@ -1,8 +1,9 @@
 enum SocketEvent {
   EnterGround = 'enterGround',
   LeaveGround = 'leaveGround',
-  Created = 'created',
+  Join = 'join',
   Joined = 'joined',
+  IceCandidate = 'iceCandidate',
 }
 
 export default SocketEvent
