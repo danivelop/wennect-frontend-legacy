@@ -8,8 +8,6 @@ import _ from 'lodash'
 /* Internal dependencies */
 import { enterGround, leaveGround } from 'modules/reducers/groundReducer'
 import { getGround, getLocalStream } from 'modules/selectors/groundSelector'
-import SocketService from 'services/SocketService'
-import SocketEvent from 'constants/SocketEvent'
 import Button, { Shape } from 'elements/Button'
 import SVGIcon, { Size } from 'elements/SVGIcon'
 import styles from './Ground.module.scss'
@@ -51,12 +49,10 @@ function Ground({ roomId }: GroundProps) {
   }, [history])
 
   useEffect(() => {
-    SocketService.emit(SocketEvent.EnterGround, roomId)
-    dispatch(enterGround())
+    dispatch(enterGround({ roomId }))
 
     return function cleanup() {
-      SocketService.emit(SocketEvent.LeaveGround, roomId)
-      dispatch(leaveGround())
+      dispatch(leaveGround({ roomId }))
     }
   }, [roomId, dispatch])
 
