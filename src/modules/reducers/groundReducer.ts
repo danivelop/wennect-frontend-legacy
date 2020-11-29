@@ -14,7 +14,11 @@ import _ from 'lodash'
 /* Internal dependencies */
 import Ground from 'models/Ground'
 import PeerConnection from 'models/PeerConnection'
-import { getGround, getLocalStream } from 'modules/selectors/groundSelector'
+import {
+  getGround,
+  getLocalStream,
+  getPeerConnection,
+} from 'modules/selectors/groundSelector'
 import SocketService from 'services/SocketService'
 import SocketEvent from 'constants/SocketEvent'
 import { ActionType, createSocketChannel } from 'utils/reduxUtils'
@@ -52,12 +56,18 @@ interface WaitRemoteStreamPayload {
   peerConnection: RTCPeerConnection
 }
 
+interface WaitLocalIceCandidatePayload {
+  remoteId: string
+  peerConnection: RTCPeerConnection
+}
+
 const ENTER_GROUND = 'ground/ENTER_GROUND' as const
 const CREATE_GROUND = 'ground/CREATE_GROUND' as const
 const LEAVE_GROUND = 'ground/LEAVE_GROUND' as const
 const CLEAR_GROUND = 'ground/CLEAR_GROUND' as const
 const CREATE_PEER_CONNECTION = 'ground/CREATE_PEER_CONNECTION' as const
 const WAIT_REMOTE_STREAM = 'ground/WAIT_REMOTE_STREAM' as const
+const WAIT_LOCAL_ICE_CANDIDATE = 'ground/WAIT_LOCAL_ICE_CANDIDATE' as const
 
 export const enterGround = actionCreator<EnterGroundPayload>(ENTER_GROUND)
 export const createGround = actionCreator<CreateGroundPayload>(CREATE_GROUND)
@@ -69,6 +79,9 @@ export const createPeerConnection = actionCreator<CreatePeerConnectionPayload>(
 export const waitRemoteStream = actionCreator<WaitRemoteStreamPayload>(
   WAIT_REMOTE_STREAM,
 )
+export const waitIceCandidate = actionCreator<WaitLocalIceCandidatePayload>(
+  WAIT_LOCAL_ICE_CANDIDATE,
+)
 
 function* enterGroundSaga(
   action: ActionType<EnterGroundPayload, {}, typeof ENTER_GROUND>,
@@ -77,7 +90,7 @@ function* enterGroundSaga(
     const { roomId } = action.payload
     const mediaStream = yield call([navigator.mediaDevices, 'getUserMedia'], {
       video: true,
-      audio: true,
+      audio: false,
     })
 
     yield put(createGround({ localStream: mediaStream }))
@@ -93,19 +106,20 @@ function* leaveGroundSaga(
   const { roomId } = action.payload
   const ground: Ground = yield select(getGround)
   ground.hangUp()
-  yield put(clearGround())
   SocketService.emit(SocketEvent.LeaveGround, roomId)
+  yield put(clearGround())
 }
 
 function* joinGroundSaga(eventType: SocketEvent) {
   try {
     const channel = yield call(createSocketChannel, eventType)
-    const localStream = yield select(getLocalStream)
 
     while (true) {
       const remoteId = yield take(channel)
+      const localStream = yield select(getLocalStream)
       const peerConnection = new RTCPeerConnection()
 
+      yield put(waitIceCandidate({ remoteId, peerConnection }))
       yield put(waitRemoteStream({ remoteId, peerConnection }))
 
       for (const track of localStream.getTracks()) {
@@ -138,11 +152,64 @@ function* waitRemoteStreamSaga(
   }
 }
 
+function* waitLocalIceCandidateSaga(
+  action: ActionType<
+    WaitLocalIceCandidatePayload,
+    {},
+    typeof WAIT_LOCAL_ICE_CANDIDATE
+  >,
+) {
+  try {
+    const { remoteId, peerConnection } = action.payload
+    const candidate = yield take(
+      eventChannel(emitter => {
+        peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
+          emitter(event.candidate)
+        }
+        return _.noop
+      }),
+    )
+
+    if (!_.isNil(candidate)) {
+      SocketService.emit(SocketEvent.IceCandidate, {
+        remoteId,
+        label: candidate.sdpMLineIndex,
+        id: candidate.sdpMid,
+        candidate: candidate.candidate,
+      })
+    }
+  } catch (error) {
+    console.log(error)
+  }
+}
+
+function* waitRemoteIceCandidateSaga(eventType: SocketEvent) {
+  try {
+    const channel = yield call(createSocketChannel, eventType)
+
+    while (true) {
+      const payload = yield take(channel)
+      const peerConnection = yield select(state =>
+        getPeerConnection(state, payload.remoteId),
+      )
+      const candidate = new RTCIceCandidate({
+        sdpMLineIndex: payload.label,
+        candidate: payload.candidate,
+      })
+      peerConnection.addIceCandidate(candidate)
+    }
+  } catch (error) {
+    console.log(error)
+  }
+}
+
 export function* groundSaga() {
   yield takeLatest(ENTER_GROUND, enterGroundSaga)
   yield takeLatest(LEAVE_GROUND, leaveGroundSaga)
   yield fork(joinGroundSaga, SocketEvent.Join)
   yield takeEvery(WAIT_REMOTE_STREAM, waitRemoteStreamSaga)
+  yield takeEvery(WAIT_LOCAL_ICE_CANDIDATE, waitLocalIceCandidateSaga)
+  yield fork(waitRemoteIceCandidateSaga, SocketEvent.IceCandidate)
 }
 
 const initialState: State = {
