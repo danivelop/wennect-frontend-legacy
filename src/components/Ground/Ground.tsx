@@ -1,5 +1,5 @@
 /* External dependencies */
-import React, { useEffect, useCallback, useState, useRef } from 'react'
+import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { useHistory } from 'react-router-dom'
 import { useDispatch, useSelector } from 'react-redux'
 import classNames from 'classnames/bind'
@@ -26,6 +26,7 @@ function Ground({ roomId }: GroundProps) {
   const localStream = useSelector(getLocalStream)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
+  const remoteVideoRef = useRef<HTMLVideoElement>(null)
 
   const [enableVideo, setEnableVideo] = useState(true)
   const [enableAudio, setEnableAudio] = useState(true)
@@ -48,6 +49,22 @@ function Ground({ roomId }: GroundProps) {
     history.goBack()
   }, [history])
 
+  const remoteVideos = useMemo(() => {
+    return ground.peerConnections.map(pc => (
+      <video
+        key={pc.remoteId}
+        className={cx('remote-video')}
+        ref={ref => {
+          if (ref) {
+            ref.srcObject = pc.remoteStream
+          }
+        }}
+        autoPlay
+        playsInline
+      ></video>
+    ))
+  }, [ground.peerConnections])
+
   useEffect(() => {
     dispatch(enterGround({ roomId }))
 
@@ -61,6 +78,16 @@ function Ground({ roomId }: GroundProps) {
       localVideoRef.current.srcObject = localStream
     }
   }, [localStream])
+
+  useEffect(() => {
+    if (remoteVideoRef.current) {
+      console.log(ground.peerConnections.get(0)?.remoteStream)
+      remoteVideoRef.current.srcObject = ground.peerConnections.get(0)
+        ?.remoteStream as any
+
+      console.log(remoteVideoRef.current)
+    }
+  }, [ground.peerConnections])
 
   return (
     <div className={cx('ground-container')}>
@@ -103,6 +130,7 @@ function Ground({ roomId }: GroundProps) {
           </li>
         </ul>
         <div className={cx('remote-video-wrapper')}>remote video</div>
+        {remoteVideos}
       </div>
     </div>
   )

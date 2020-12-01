@@ -4,6 +4,8 @@ enum SocketEvent {
   Join = 'join',
   Joined = 'joined',
   IceCandidate = 'iceCandidate',
+  Offer = 'offer',
+  Answer = 'answer',
 }
 
 export default SocketEvent

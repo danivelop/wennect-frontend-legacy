@@ -82,7 +82,7 @@
   },
   "scripts": {
     "start": "react-scripts start",
-    "start:https": "HTTPS=true npm run start",
+    "start:https": "HTTPS=true SSL_CRT_FILE=private/server.crt SSL_KEY_FILE=private/server.key npm run start",
     "build": "react-scripts build",
     "test": "react-scripts test",
     "eject": "react-scripts eject",
