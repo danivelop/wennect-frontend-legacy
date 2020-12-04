@@ -49,21 +49,29 @@ function Ground({ roomId }: GroundProps) {
     history.goBack()
   }, [history])
 
+  const handleInsertRemoteStream = useCallback(
+    (
+      remoteVideo: HTMLVideoElement | null,
+      remoteStream: MediaStream | null,
+    ) => {
+      if (remoteVideo) {
+        remoteVideo.srcObject = remoteStream
+      }
+    },
+    [],
+  )
+
   const remoteVideos = useMemo(() => {
     return ground.peerConnections.map(pc => (
       <video
         key={pc.remoteId}
         className={cx('remote-video')}
-        ref={ref => {
-          if (ref) {
-            ref.srcObject = pc.remoteStream
-          }
-        }}
+        ref={ref => handleInsertRemoteStream(ref, pc.remoteStream)}
         autoPlay
         playsInline
       ></video>
     ))
-  }, [ground.peerConnections])
+  }, [ground.peerConnections, handleInsertRemoteStream])
 
   useEffect(() => {
     dispatch(enterGround({ roomId }))
