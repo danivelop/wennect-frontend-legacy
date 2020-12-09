@@ -1,8 +1,6 @@
 enum SocketEvent {
-  EnterGround = 'enterGround',
-  LeaveGround = 'leaveGround',
-  Join = 'join',
-  Joined = 'joined',
+  Enter = 'enter',
+  Leave = 'leave',
   IceCandidate = 'iceCandidate',
   Offer = 'offer',
   Answer = 'answer',

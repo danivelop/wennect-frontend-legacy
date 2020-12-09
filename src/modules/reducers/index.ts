@@ -4,7 +4,7 @@ import { all } from 'redux-saga/effects'
 
 /* Internal dependencies */
 import authReducer, { authSaga } from './authReducer'
-import groundReducer, { groundSaga } from './groundReducer'
+import groundReducer from './groundReducer'
 
 const rootReducer = combineReducers({
   authReducer,
@@ -12,7 +12,7 @@ const rootReducer = combineReducers({
 })
 
 export function* rootSaga() {
-  yield all([authSaga(), groundSaga()])
+  yield all([authSaga()])
 }
 
 export default rootReducer

@@ -1,13 +1,13 @@
 /* External dependencies */
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { useHistory } from 'react-router-dom'
-import { useDispatch, useSelector } from 'react-redux'
+import { useSelector } from 'react-redux'
 import classNames from 'classnames/bind'
 import _ from 'lodash'
 
 /* Internal dependencies */
-import { enterGround, leaveGround } from 'modules/reducers/groundReducer'
-import { getGround, getLocalStream } from 'modules/selectors/groundSelector'
+import { getPeerConnections } from 'modules/selectors/groundSelector'
+import WebRTCService from 'services/WebRTCService'
 import Button, { Shape } from 'elements/Button'
 import SVGIcon, { Size } from 'elements/SVGIcon'
 import styles from './Ground.module.scss'
@@ -19,31 +19,23 @@ interface GroundProps {
 const cx = classNames.bind(styles)
 
 function Ground({ roomId }: GroundProps) {
-  const dispatch = useDispatch()
   const history = useHistory()
-
-  const ground = useSelector(getGround)
-  const localStream = useSelector(getLocalStream)
+  const peerConnections = useSelector(getPeerConnections)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
-  const remoteVideoRef = useRef<HTMLVideoElement>(null)
 
   const [enableVideo, setEnableVideo] = useState(true)
   const [enableAudio, setEnableAudio] = useState(true)
 
   const toggleVideo = useCallback(async () => {
-    if (_.isNil(ground)) return
-
-    ground.setVideo(!enableVideo)
+    WebRTCService.setVideo(!enableVideo)
     setEnableVideo(prev => !prev)
-  }, [ground, enableVideo])
+  }, [enableVideo])
 
   const toggleAudio = useCallback(() => {
-    if (_.isNil(ground)) return
-
-    ground.setAudio(!enableAudio)
+    WebRTCService.setAudio(!enableAudio)
     setEnableAudio(prev => !prev)
-  }, [ground, enableAudio])
+  }, [enableAudio])
 
   const handleHangUp = useCallback(() => {
     history.goBack()
@@ -62,7 +54,7 @@ function Ground({ roomId }: GroundProps) {
   )
 
   const remoteVideos = useMemo(() => {
-    return ground.peerConnections.map(pc => (
+    return peerConnections.map(pc => (
       <video
         key={pc.remoteId}
         className={cx('remote-video')}
@@ -71,31 +63,31 @@ function Ground({ roomId }: GroundProps) {
         playsInline
       ></video>
     ))
-  }, [ground.peerConnections, handleInsertRemoteStream])
+  }, [peerConnections, handleInsertRemoteStream])
 
   useEffect(() => {
-    dispatch(enterGround({ roomId }))
+    ;(async () => {
+      try {
+        if (!_.isNil(localVideoRef.current)) {
+          localVideoRef.current.srcObject = await WebRTCService.getLocalMediaStream(
+            {
+              video: true,
+              audio: false,
+            },
+          )
+          WebRTCService.init()
+          WebRTCService.enter(roomId)
+        }
+      } catch (error) {
+        console.error(error)
+      }
+    })()
 
     return function cleanup() {
-      dispatch(leaveGround({ roomId }))
+      WebRTCService.leave(roomId)
+      WebRTCService.hangUp()
     }
-  }, [roomId, dispatch])
-
-  useEffect(() => {
-    if (!_.isNil(localStream) && localVideoRef.current) {
-      localVideoRef.current.srcObject = localStream
-    }
-  }, [localStream])
-
-  useEffect(() => {
-    if (remoteVideoRef.current) {
-      console.log(ground.peerConnections.get(0)?.remoteStream)
-      remoteVideoRef.current.srcObject = ground.peerConnections.get(0)
-        ?.remoteStream as any
-
-      console.log(remoteVideoRef.current)
-    }
-  }, [ground.peerConnections])
+  }, [roomId])
 
   return (
     <div className={cx('ground-container')}>

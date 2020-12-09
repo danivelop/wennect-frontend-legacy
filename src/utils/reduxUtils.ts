@@ -4,7 +4,7 @@ import { call, put } from 'redux-saga/effects'
 import _ from 'lodash'
 
 /* Internal dependencies */
-import SockerService from 'services/SocketService'
+import SocketService from 'services/SocketService'
 import SocketEvent from 'constants/SocketEvent'
 
 export type AsyncActionTypes<
@@ -96,9 +96,9 @@ export function createSocketChannel<T = any>(
   return eventChannel(emit => {
     const emitter = (response: T) => emit(response)
 
-    SockerService.on(eventType, emitter)
+    SocketService.on(eventType, emitter)
     return function unsubscribe() {
-      SockerService.off(eventType, emitter)
+      SocketService.off(eventType, emitter)
     }
   }, buffer || buffers.none())
 }
