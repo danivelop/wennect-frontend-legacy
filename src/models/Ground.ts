@@ -4,6 +4,7 @@ import _ from 'lodash'
 
 /* Internal dependencies */
 import PeerConnection from 'models/PeerConnection'
+import { Error } from 'utils/consoleUtils'
 
 export interface GroundAttr {
   localStream: MediaStream | null
@@ -22,12 +23,12 @@ class Ground extends GroundRecord {
 
   setVideo(enabled: boolean) {
     if (_.isNil(this.localStream)) {
-      return console.log('No local video available.')
+      return Error('No local video available.')
     }
     const videoTracks: MediaStreamTrack[] = this.localStream.getVideoTracks()
 
     if (_.isEmpty(videoTracks)) {
-      return console.log('No local video available.')
+      return Error('No local video available.')
     }
 
     for (let i = 0; i < videoTracks.length; i++) {
@@ -37,12 +38,12 @@ class Ground extends GroundRecord {
 
   setAudio(enabled: boolean) {
     if (_.isNil(this.localStream)) {
-      return console.log('No local audio available.')
+      return Error('No local audio available.')
     }
     const audioTracks: MediaStreamTrack[] = this.localStream.getAudioTracks()
 
     if (_.isEmpty(audioTracks)) {
-      return console.log('No local audio available.')
+      return Error('No local audio available.')
     }
 
     for (let i = 0; i < audioTracks.length; i++) {

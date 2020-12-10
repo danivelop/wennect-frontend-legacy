@@ -14,21 +14,21 @@ class SockerService {
     this.socket = this.manager.socket('/')
   }
 
-  on(eventType: SocketEvent, emitter: (response: any) => void) {
+  on(eventType: SocketEvent, emitter: (...args: any[]) => void) {
     if (this.socket && _.isFunction(emitter)) {
       this.socket.on(eventType, emitter)
     }
   }
 
-  off(eventType: SocketEvent, emitter: (response: any) => void) {
-    if (this.socket && _.isFunction(emitter)) {
-      this.socket.off(eventType, emitter)
+  off(eventType: SocketEvent) {
+    if (this.socket) {
+      this.socket.off(eventType)
     }
   }
 
-  emit(eventType: SocketEvent, payload: any) {
+  emit(eventType: SocketEvent, ...args: any[]) {
     if (this.socket) {
-      this.socket.emit(eventType, payload)
+      this.socket.emit(eventType, ...args)
     }
   }
 }

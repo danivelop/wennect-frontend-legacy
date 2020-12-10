@@ -98,7 +98,7 @@ export function createSocketChannel<T = any>(
 
     SocketService.on(eventType, emitter)
     return function unsubscribe() {
-      SocketService.off(eventType, emitter)
+      SocketService.off(eventType)
     }
   }, buffer || buffers.none())
 }

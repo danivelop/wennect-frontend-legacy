@@ -3,6 +3,7 @@ import React, { useMemo } from 'react'
 import _ from 'lodash'
 
 /* Internal dependencies */
+import { Error } from 'utils/consoleUtils'
 import * as Styled from './SVGIcon.styled'
 
 export enum Size {
@@ -25,7 +26,7 @@ function SVGIcon({ className, name, size = Size.Normal }: SVGIconProps) {
     try {
       return require(`assets/icons/${fileName}`)
     } catch (e) {
-      console.error(
+      Error(
         `cannot find icon name ${name}. Pleace check again. error message : ${e.message}`,
       )
     }

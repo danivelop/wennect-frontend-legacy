@@ -6,30 +6,18 @@ import * as groundAction from 'modules/reducers/groundReducer'
 import ReduxStore from 'modules/reduxStore'
 import SocketService from 'services/SocketService'
 import SocketEvent from 'constants/SocketEvent'
+import { Error } from 'utils/consoleUtils'
 
 interface ConstraintsType {
   video?: boolean
   audio?: boolean
 }
+
 interface Peer {
   remoteId: string
   remoteStream?: MediaStream
   senders: RTCRtpSender[]
   peerConnection: RTCPeerConnection
-}
-
-interface IceCandidateResponse extends RTCIceCandidate {
-  remoteId: string
-}
-
-interface OfferResponse {
-  remoteId: string
-  sessionDescription: RTCSessionDescriptionInit
-}
-
-interface AnswerResponse {
-  remoteId: string
-  sessionDescription: RTCSessionDescriptionInit
 }
 
 class WebRTC {
@@ -94,12 +82,9 @@ class WebRTC {
       const localSessionDescription = await peerConnection.createOffer()
       peerConnection.setLocalDescription(localSessionDescription)
 
-      SocketService.emit(SocketEvent.Offer, {
-        remoteId,
-        sessionDescription: localSessionDescription,
-      })
+      SocketService.emit(SocketEvent.Offer, remoteId, localSessionDescription)
     } catch (error) {
-      console.error(error)
+      Error(error)
     }
   }
 
@@ -111,8 +96,10 @@ class WebRTC {
     this.dispatch(groundAction.deletePeerConnection({ remoteId }))
   }
 
-  async waitOffer(response: OfferResponse) {
-    const { remoteId, sessionDescription: remoteSessionDescription } = response
+  async waitOffer(
+    remoteId: string,
+    remoteSessionDescription: RTCSessionDescriptionInit,
+  ) {
     const peerConnection = this.createPeerConnection(remoteId)
 
     peerConnection.setRemoteDescription(
@@ -123,17 +110,16 @@ class WebRTC {
       const localSessionDescription = await peerConnection.createAnswer()
       peerConnection.setLocalDescription(localSessionDescription)
 
-      SocketService.emit(SocketEvent.Answer, {
-        remoteId,
-        sessionDescription: localSessionDescription,
-      })
+      SocketService.emit(SocketEvent.Answer, remoteId, localSessionDescription)
     } catch (error) {
-      console.error(error)
+      Error(error)
     }
   }
 
-  waitAnswer(response: AnswerResponse) {
-    const { remoteId, sessionDescription: remoteSessionDescription } = response
+  waitAnswer(
+    remoteId: string,
+    remoteSessionDescription: RTCSessionDescriptionInit,
+  ) {
     const peer = this.getPeer(remoteId)
 
     if (!_.isNil(peer)) {
@@ -164,22 +150,16 @@ class WebRTC {
 
   waitLocalIceCandidate(remoteId: string, peerConnection: RTCPeerConnection) {
     peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
-      const { candidate: eventCandidate } = event
+      const { candidate: iceCandidate } = event
 
-      if (!_.isNil(eventCandidate)) {
-        const { sdpMLineIndex, candidate } = eventCandidate
-        SocketService.emit(SocketEvent.IceCandidate, {
-          remoteId,
-          sdpMLineIndex,
-          candidate,
-        })
+      if (!_.isNil(iceCandidate)) {
+        SocketService.emit(SocketEvent.IceCandidate, remoteId, iceCandidate)
       }
     }
   }
 
-  waitRemoteIceCandidate(response: IceCandidateResponse) {
-    const { remoteId, ...payload } = response
-    const candidate = new RTCIceCandidate(payload)
+  waitRemoteIceCandidate(remoteId: string, iceCandidate: RTCIceCandidate) {
+    const candidate = new RTCIceCandidate(iceCandidate)
     const peer = this.getPeer(remoteId)
 
     if (!_.isNil(peer)) {
@@ -189,12 +169,12 @@ class WebRTC {
 
   setVideo(enabled: boolean) {
     if (_.isNil(this.localStream)) {
-      return console.log('No local video available.')
+      return Error('No local video available.')
     }
     const videoTracks: MediaStreamTrack[] = this.localStream.getVideoTracks()
 
     if (_.isEmpty(videoTracks)) {
-      return console.log('No local video available.')
+      return Error('No local video available.')
     }
 
     for (let i = 0; i < videoTracks.length; i++) {
@@ -204,12 +184,12 @@ class WebRTC {
 
   setAudio(enabled: boolean) {
     if (_.isNil(this.localStream)) {
-      return console.log('No local audio available.')
+      return Error('No local audio available.')
     }
     const audioTracks: MediaStreamTrack[] = this.localStream.getAudioTracks()
 
     if (_.isEmpty(audioTracks)) {
-      return console.log('No local audio available.')
+      return Error('No local audio available.')
     }
 
     for (let i = 0; i < audioTracks.length; i++) {
@@ -218,11 +198,11 @@ class WebRTC {
   }
 
   hangUp() {
-    SocketService.off(SocketEvent.Enter, this.enterRemotePeer)
-    SocketService.off(SocketEvent.Leave, this.leaveRemotePeer)
-    SocketService.off(SocketEvent.Offer, this.waitOffer)
-    SocketService.off(SocketEvent.Answer, this.waitAnswer)
-    SocketService.off(SocketEvent.IceCandidate, this.waitRemoteIceCandidate)
+    SocketService.off(SocketEvent.Enter)
+    SocketService.off(SocketEvent.Leave)
+    SocketService.off(SocketEvent.Offer)
+    SocketService.off(SocketEvent.Answer)
+    SocketService.off(SocketEvent.IceCandidate)
 
     this.localStream?.getTracks().forEach(track => track.stop())
     this.localStream = null

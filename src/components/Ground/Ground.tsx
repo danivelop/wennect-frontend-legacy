@@ -10,6 +10,7 @@ import { getPeerConnections } from 'modules/selectors/groundSelector'
 import WebRTCService from 'services/WebRTCService'
 import Button, { Shape } from 'elements/Button'
 import SVGIcon, { Size } from 'elements/SVGIcon'
+import { Error } from 'utils/consoleUtils'
 import styles from './Ground.module.scss'
 
 interface GroundProps {
@@ -79,7 +80,7 @@ function Ground({ roomId }: GroundProps) {
           WebRTCService.enter(roomId)
         }
       } catch (error) {
-        console.error(error)
+        Error(error)
       }
     })()
 
