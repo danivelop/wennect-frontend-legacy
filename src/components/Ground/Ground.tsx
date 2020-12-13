@@ -61,6 +61,8 @@ function Ground({ roomId }: GroundProps) {
     try {
     } catch (error) {
       Error(error)
+    } finally {
+      setSubmitting(false)
     }
   }, [])
 
@@ -174,7 +176,7 @@ function Ground({ roomId }: GroundProps) {
                       loading={isSubmitting}
                       type="submit"
                     >
-                      보내기
+                      Send
                     </Button>
                   </Form>
                 </>
