@@ -86,6 +86,7 @@ $REMOTE_VIDEO_HEIGHT: calc((100vh - 62px) * 186 / 1000);
       
       .messenger-stream {
         flex: 1;
+        overflow-y: scroll;
       }
 
       .message-input-wrapper {

@@ -3,6 +3,7 @@ import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { useHistory } from 'react-router-dom'
 import { useSelector } from 'react-redux'
 import { Formik, Form, Field } from 'formik'
+import Immutable from 'immutable'
 import classNames from 'classnames/bind'
 import _ from 'lodash'
 
@@ -28,6 +29,7 @@ function Ground({ roomId }: GroundProps) {
 
   const [enableVideo, setEnableVideo] = useState(true)
   const [enableAudio, setEnableAudio] = useState(true)
+  const [messages, setMessages] = useState(Immutable.List())
 
   const toggleVideo = useCallback(async () => {
     if (WebRTCService.setVideo(!enableVideo)) {
@@ -57,13 +59,23 @@ function Ground({ roomId }: GroundProps) {
     [],
   )
 
-  const handleSubmit = useCallback(({ value }, { setSubmitting }) => {
-    try {
-    } catch (error) {
-      Error(error)
-    } finally {
-      setSubmitting(false)
-    }
+  const handleSubmit = useCallback(
+    ({ value }, { setSubmitting, resetForm }) => {
+      try {
+        WebRTCService.sendData(value)
+        setMessages(prev => prev.push(value))
+        resetForm()
+      } catch (error) {
+        Error(error)
+      } finally {
+        setSubmitting(false)
+      }
+    },
+    [],
+  )
+
+  const handleData = useCallback((value: string) => {
+    setMessages(prev => prev.push(value))
   }, [])
 
   const remoteVideos = useMemo(() => {
@@ -78,6 +90,11 @@ function Ground({ roomId }: GroundProps) {
     ))
   }, [peerConnections, handleInsertRemoteStream])
 
+  const messageList = useMemo(
+    () => messages.map((message, index) => <div key={index}>{message}</div>),
+    [messages],
+  )
+
   useEffect(() => {
     ;(async () => {
       try {
@@ -88,7 +105,7 @@ function Ground({ roomId }: GroundProps) {
               audio: true,
             },
           )
-          WebRTCService.init()
+          WebRTCService.init(handleData)
           WebRTCService.enter(roomId)
 
           if (WebRTCService.setAudio(false)) {
@@ -104,7 +121,7 @@ function Ground({ roomId }: GroundProps) {
       WebRTCService.leave(roomId)
       WebRTCService.hangUp()
     }
-  }, [roomId])
+  }, [roomId, handleData])
 
   const formikConfig = useRef({
     initialValues: {
@@ -158,7 +175,7 @@ function Ground({ roomId }: GroundProps) {
           <div className={cx('remote-video-wrapper')}>{remoteVideos}</div>
         </div>
         <div className={cx('chat-area')}>
-          <div className={cx('messenger-stream')}></div>
+          <div className={cx('messenger-stream')}>{messageList}</div>
           <div className={cx('message-input-wrapper')}>
             <Formik {...formikConfig.current}>
               {({ dirty, isSubmitting }) => (
@@ -169,6 +186,7 @@ function Ground({ roomId }: GroundProps) {
                       name="value"
                       type="text"
                       placeholder=""
+                      autoComplete="off"
                     />
                     <Button
                       className={cx('submit-button')}

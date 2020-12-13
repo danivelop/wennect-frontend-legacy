@@ -5,6 +5,7 @@ import _ from 'lodash'
 import * as groundAction from 'modules/reducers/groundReducer'
 import ReduxStore from 'modules/reduxStore'
 import SocketService from 'services/SocketService'
+import DataChannelState from 'constants/DataChannelState'
 import SocketEvent from 'constants/SocketEvent'
 import { Error } from 'utils/consoleUtils'
 
@@ -18,13 +19,15 @@ interface Peer {
   remoteStream?: MediaStream
   senders: RTCRtpSender[]
   peerConnection: RTCPeerConnection
+  sendChannel: RTCDataChannel
 }
 
 class WebRTC {
   localStream: MediaStream | null = null
   peers: Peer[] = []
+  dataHandler: (value: string) => void = _.noop
 
-  init() {
+  init(dataHandler: (value: string) => void = _.noop) {
     SocketService.on(SocketEvent.Enter, this.enterRemotePeer.bind(this))
     SocketService.on(SocketEvent.Leave, this.leaveRemotePeer.bind(this))
     SocketService.on(SocketEvent.Offer, this.waitOffer.bind(this))
@@ -33,6 +36,8 @@ class WebRTC {
       SocketEvent.IceCandidate,
       this.waitRemoteIceCandidate.bind(this),
     )
+
+    this.dataHandler = dataHandler
   }
 
   enter(roomId: string) {
@@ -43,13 +48,19 @@ class WebRTC {
     SocketService.emit(SocketEvent.Leave, roomId)
   }
 
+  /* peerconnection utils */
   createPeerConnection(remoteId: string): RTCPeerConnection {
     const peerConnection = new RTCPeerConnection()
-    const peer: Peer = { remoteId, senders: [], peerConnection }
+    const sendChannel = peerConnection.createDataChannel(
+      this.getChannelName(remoteId),
+    )
+    const peer: Peer = { remoteId, senders: [], peerConnection, sendChannel }
 
     this.peers.push(peer)
     this.waitRemoteStream(remoteId, peerConnection)
     this.waitLocalIceCandidate(remoteId, peerConnection)
+
+    peerConnection.ondatachannel = this.receiveChannel.bind(this)
 
     const { localStream } = this
 
@@ -167,6 +178,36 @@ class WebRTC {
     }
   }
 
+  getPeer(remoteId: string): Peer | undefined {
+    return this.peers.find(pc => pc.remoteId === remoteId)
+  }
+
+  /* data channel utils */
+  sendData(value: any) {
+    this.peers.forEach(peer => {
+      const { sendChannel } = peer
+      if (
+        !_.isNil(sendChannel) &&
+        sendChannel.readyState === DataChannelState.Open
+      ) {
+        peer.sendChannel.send(value)
+      }
+    })
+  }
+
+  receiveChannel(event: RTCDataChannelEvent) {
+    event.channel.onmessage = this.receiveData.bind(this)
+  }
+
+  receiveData(event: MessageEvent) {
+    this.dataHandler(event.data)
+  }
+
+  getChannelName(remoteId: string) {
+    return `channel-${remoteId}`
+  }
+
+  /* local stream utils */
   setVideo(enabled: boolean): boolean {
     if (_.isNil(this.localStream)) {
       Error('No local video available.')
@@ -222,10 +263,7 @@ class WebRTC {
     this.peers = []
   }
 
-  getPeer(remoteId: string): Peer | undefined {
-    return this.peers.find(pc => pc.remoteId === remoteId)
-  }
-
+  /* dispatch action in redux */
   dispatch(action) {
     ReduxStore.dispatch(action)
   }
