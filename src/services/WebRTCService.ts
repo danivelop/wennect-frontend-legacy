@@ -167,34 +167,40 @@ class WebRTC {
     }
   }
 
-  setVideo(enabled: boolean) {
+  setVideo(enabled: boolean): boolean {
     if (_.isNil(this.localStream)) {
-      return Error('No local video available.')
+      Error('No local video available.')
+      return false
     }
     const videoTracks: MediaStreamTrack[] = this.localStream.getVideoTracks()
 
     if (_.isEmpty(videoTracks)) {
-      return Error('No local video available.')
+      Error('No local video available.')
+      return false
     }
 
     for (let i = 0; i < videoTracks.length; i++) {
       videoTracks[i].enabled = enabled
     }
+    return true
   }
 
-  setAudio(enabled: boolean) {
+  setAudio(enabled: boolean): boolean {
     if (_.isNil(this.localStream)) {
-      return Error('No local audio available.')
+      Error('No local audio available.')
+      return false
     }
     const audioTracks: MediaStreamTrack[] = this.localStream.getAudioTracks()
 
     if (_.isEmpty(audioTracks)) {
-      return Error('No local audio available.')
+      Error('No local audio available.')
+      return false
     }
 
     for (let i = 0; i < audioTracks.length; i++) {
       audioTracks[i].enabled = enabled
     }
+    return true
   }
 
   hangUp() {

@@ -1,64 +1,122 @@
 @import '~Styles/colors';
 
+$REMOTE_VIDEO_HEIGHT: calc((100vh - 62px) * 186 / 1000);
+
 .ground-container {
   width: 100%;
-  height: 100%;
+  height: calc(100vh - 62px);
+  background-color: $oc-black;
 
   .ground-wrapper {
-    width: 800px;
-    height: 600px;
-    position: relative;
+    display: flex;
+    width: 100%;
+    height: 100%;
 
-    .local-video-wrapper {
-      width: 100%;
-      height: 100%;
-
-      .local-video {
-        width: 100%;
-        height: 100%;
-        background-color: $oc-black;
-      }
-    }
-
-    .option-menu {
+    .video-area {
       display: flex;
-      position: absolute;
-      bottom: 20px;
-      left: 50%;
-      transform: translateX(-50%);
+      flex-direction: column;
+      width: calc((100vh - 62px - 150px) * 4 / 3);
 
-      .item-wrapper {
-        width: 50px;
-        height: 50px;
-
-        .option-item {
-          width: 100%;
+      .local-video-wrapper {
+        display: flex;
+        justify-content: center;
+        width: 100%;
+        height: calc((100vh - 62px) * 814 / 1000);
+        position: relative;
+  
+        .local-video {
           height: 100%;
-          background-color: $oc-gray-3;
+          background-color: $oc-black;
+        }
 
-          &:hover {
-            background-color: $oc-gray-4;
+        .option-menu {
+          display: flex;
+          position: absolute;
+          bottom: 20px;
+          left: 50%;
+          transform: translateX(-50%);
+    
+          .item-wrapper {
+            width: 50px;
+            height: 50px;
+    
+            .option-item {
+              width: 100%;
+              height: 100%;
+              background-color: $oc-gray-3;
+    
+              &:hover {
+                background-color: $oc-gray-4;
+              }
+    
+              &.disabled {
+                background-color: $oc-orange-9;
+              }
+    
+              &.hang-up {
+                background-color: red;
+              }
+            }
           }
-
-          &.disabled {
-            background-color: $oc-orange-9;
-          }
-
-          &.hang-up {
-            background-color: red;
+    
+          .item-wrapper + .item-wrapper {
+            margin-left: 10px;
           }
         }
       }
+  
+      .remote-video-wrapper {
+        width: 100%;
+        height: $REMOTE_VIDEO_HEIGHT;
+        overflow-x: scroll;
 
-      .item-wrapper + .item-wrapper {
-        margin-left: 10px;
+        .remote-video {
+          height: 100%;
+          background-color: $oc-black;
+        }
       }
     }
 
-    .remote-video {
-      width: 100px;
-      height: 100px;
-      background-color: $oc-black;
+    .chat-area {
+      display: flex;
+      flex-direction: column;
+      flex: 1;
+      height: 100%;
+      background-color: $oc-white;
+      
+      .messenger-stream {
+        flex: 1;
+      }
+
+      .message-input-wrapper {
+        width: 100%;
+        height: 42px;
+        align-self: flex-end;
+        border-top: 1px solid $oc-gray-3;
+
+        .message-form {
+          display: flex;
+          align-items: center;
+          width: 100%;
+          height: 100%;
+
+          .message-input {
+            flex: 1;
+            height: 100%;
+            padding: 0 10px;
+            box-sizing: border-box;
+            border: 0;
+            outline: none;
+          }
+
+          .submit-button {
+            width: 50px;
+            height: 100%;
+            color: $oc-white;
+            background-color: $oc-blue-5;
+          }
+        }
+      }
     }
   }
 }

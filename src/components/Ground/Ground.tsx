@@ -2,6 +2,7 @@
 import React, { useEffect, useCallback, useState, useRef, useMemo } from 'react'
 import { useHistory } from 'react-router-dom'
 import { useSelector } from 'react-redux'
+import { Formik, Form, Field } from 'formik'
 import classNames from 'classnames/bind'
 import _ from 'lodash'
 
@@ -29,13 +30,15 @@ function Ground({ roomId }: GroundProps) {
   const [enableAudio, setEnableAudio] = useState(true)
 
   const toggleVideo = useCallback(async () => {
-    WebRTCService.setVideo(!enableVideo)
-    setEnableVideo(prev => !prev)
+    if (WebRTCService.setVideo(!enableVideo)) {
+      setEnableVideo(prev => !prev)
+    }
   }, [enableVideo])
 
   const toggleAudio = useCallback(() => {
-    WebRTCService.setAudio(!enableAudio)
-    setEnableAudio(prev => !prev)
+    if (WebRTCService.setAudio(!enableAudio)) {
+      setEnableAudio(prev => !prev)
+    }
   }, [enableAudio])
 
   const handleHangUp = useCallback(() => {
@@ -53,6 +56,13 @@ function Ground({ roomId }: GroundProps) {
     },
     [],
   )
+
+  const handleSubmit = useCallback(({ value }, { setSubmitting }) => {
+    try {
+    } catch (error) {
+      Error(error)
+    }
+  }, [])
 
   const remoteVideos = useMemo(() => {
     return peerConnections.map(pc => (
@@ -73,11 +83,15 @@ function Ground({ roomId }: GroundProps) {
           localVideoRef.current.srcObject = await WebRTCService.getLocalMediaStream(
             {
               video: true,
-              audio: false,
+              audio: true,
             },
           )
           WebRTCService.init()
           WebRTCService.enter(roomId)
+
+          if (WebRTCService.setAudio(false)) {
+            setEnableAudio(false)
+          }
         }
       } catch (error) {
         Error(error)
@@ -90,48 +104,84 @@ function Ground({ roomId }: GroundProps) {
     }
   }, [roomId])
 
+  const formikConfig = useRef({
+    initialValues: {
+      value: '',
+    },
+    onSubmit: handleSubmit,
+  })
+
   return (
     <div className={cx('ground-container')}>
       <div className={cx('ground-wrapper')}>
-        <div className={cx('local-video-wrapper')}>
-          <video
-            ref={localVideoRef}
-            className={cx('local-video')}
-            autoPlay
-            playsInline
-          ></video>
+        <div className={cx('video-area')}>
+          <div className={cx('local-video-wrapper')}>
+            <video
+              ref={localVideoRef}
+              className={cx('local-video')}
+              autoPlay
+              playsInline
+              muted
+            ></video>
+            <ul className={cx('option-menu')}>
+              <li className={cx('item-wrapper')}>
+                <Button
+                  className={cx('option-item', { disabled: !enableVideo })}
+                  shape={Shape.Circle}
+                  onClick={toggleVideo}
+                >
+                  <SVGIcon name="video" size={Size.Normal} />
+                </Button>
+              </li>
+              <li className={cx('item-wrapper')}>
+                <Button
+                  className={cx('option-item', 'hang-up')}
+                  shape={Shape.Circle}
+                  onClick={handleHangUp}
+                >
+                  <SVGIcon name="phone" size={Size.Normal} />
+                </Button>
+              </li>
+              <li className={cx('item-wrapper')}>
+                <Button
+                  className={cx('option-item', { disabled: !enableAudio })}
+                  shape={Shape.Circle}
+                  onClick={toggleAudio}
+                >
+                  <SVGIcon name="audio" size={Size.Normal} />
+                </Button>
+              </li>
+            </ul>
+          </div>
+          <div className={cx('remote-video-wrapper')}>{remoteVideos}</div>
         </div>
-        <ul className={cx('option-menu')}>
-          <li className={cx('item-wrapper')}>
-            <Button
-              className={cx('option-item', { disabled: !enableVideo })}
-              shape={Shape.Circle}
-              onClick={toggleVideo}
-            >
-              <SVGIcon name="video" size={Size.Normal} />
-            </Button>
-          </li>
-          <li className={cx('item-wrapper')}>
-            <Button
-              className={cx('option-item', 'hang-up')}
-              shape={Shape.Circle}
-              onClick={handleHangUp}
-            >
-              <SVGIcon name="phone" size={Size.Normal} />
-            </Button>
-          </li>
-          <li className={cx('item-wrapper')}>
-            <Button
-              className={cx('option-item', { disabled: !enableAudio })}
-              shape={Shape.Circle}
-              onClick={toggleAudio}
-            >
-              <SVGIcon name="audio" size={Size.Normal} />
-            </Button>
-          </li>
-        </ul>
-        <div className={cx('remote-video-wrapper')}>remote video</div>
-        {remoteVideos}
+        <div className={cx('chat-area')}>
+          <div className={cx('messenger-stream')}></div>
+          <div className={cx('message-input-wrapper')}>
+            <Formik {...formikConfig.current}>
+              {({ dirty, isSubmitting }) => (
+                <>
+                  <Form className={cx('message-form')}>
+                    <Field
+                      className={cx('message-input')}
+                      name="value"
+                      type="text"
+                      placeholder=""
+                    />
+                    <Button
+                      className={cx('submit-button')}
+                      disabled={!dirty}
+                      loading={isSubmitting}
+                      type="submit"
+                    >
+                      보내기
+                    </Button>
+                  </Form>
+                </>
+              )}
+            </Formik>
+          </div>
+        </div>
       </div>
     </div>
   )
