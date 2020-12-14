@@ -7,7 +7,7 @@ import ReduxStore from 'modules/reduxStore'
 import SocketService from 'services/SocketService'
 import DataChannelState from 'constants/DataChannelState'
 import SocketEvent from 'constants/SocketEvent'
-import { Error } from 'utils/consoleUtils'
+import { Warn, Error } from 'utils/consoleUtils'
 
 interface ConstraintsType {
   video?: boolean
@@ -19,15 +19,21 @@ interface Peer {
   remoteStream?: MediaStream
   senders: RTCRtpSender[]
   peerConnection: RTCPeerConnection
-  sendChannel: RTCDataChannel
+  sendChannel?: RTCDataChannel
+}
+
+interface InitOption {
+  useDataChannel: boolean
+  dataHandler: (value: string) => void
 }
 
 class WebRTC {
   localStream: MediaStream | null = null
   peers: Peer[] = []
+  useDataChannel: boolean = false
   dataHandler: (value: string) => void = _.noop
 
-  init(dataHandler: (value: string) => void = _.noop) {
+  init({ useDataChannel = false, dataHandler = _.noop }: InitOption) {
     SocketService.on(SocketEvent.Enter, this.enterRemotePeer.bind(this))
     SocketService.on(SocketEvent.Leave, this.leaveRemotePeer.bind(this))
     SocketService.on(SocketEvent.Offer, this.waitOffer.bind(this))
@@ -37,6 +43,7 @@ class WebRTC {
       this.waitRemoteIceCandidate.bind(this),
     )
 
+    this.useDataChannel = useDataChannel
     this.dataHandler = dataHandler
   }
 
@@ -51,10 +58,14 @@ class WebRTC {
   /* peerconnection utils */
   createPeerConnection(remoteId: string): RTCPeerConnection {
     const peerConnection = new RTCPeerConnection()
-    const sendChannel = peerConnection.createDataChannel(
-      this.getChannelName(remoteId),
-    )
-    const peer: Peer = { remoteId, senders: [], peerConnection, sendChannel }
+    const peer: Peer = { remoteId, senders: [], peerConnection }
+
+    if (this.useDataChannel) {
+      const sendChannel = peerConnection.createDataChannel(
+        this.getChannelName(remoteId),
+      )
+      _.set(peer, 'sendChannel', sendChannel)
+    }
 
     this.peers.push(peer)
     this.waitRemoteStream(remoteId, peerConnection)
@@ -183,14 +194,21 @@ class WebRTC {
   }
 
   /* data channel utils */
-  sendData(value: any) {
+  sendData(value: string) {
+    if (!this.useDataChannel) {
+      Warn(
+        `Cannot send data because data channel is not available. 
+        Give the 'useDataChannel' prop as option of WebRTCService's init function`,
+      )
+    }
+
     this.peers.forEach(peer => {
       const { sendChannel } = peer
       if (
         !_.isNil(sendChannel) &&
         sendChannel.readyState === DataChannelState.Open
       ) {
-        peer.sendChannel.send(value)
+        sendChannel.send(value)
       }
     })
   }
@@ -244,7 +262,7 @@ class WebRTC {
     return true
   }
 
-  hangUp() {
+  clear() {
     SocketService.off(SocketEvent.Enter)
     SocketService.off(SocketEvent.Leave)
     SocketService.off(SocketEvent.Offer)

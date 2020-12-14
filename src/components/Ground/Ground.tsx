@@ -105,7 +105,7 @@ function Ground({ roomId }: GroundProps) {
               audio: true,
             },
           )
-          WebRTCService.init(handleData)
+          WebRTCService.init({ useDataChannel: true, dataHandler: handleData })
           WebRTCService.enter(roomId)
 
           if (WebRTCService.setAudio(false)) {
@@ -119,7 +119,7 @@ function Ground({ roomId }: GroundProps) {
 
     return function cleanup() {
       WebRTCService.leave(roomId)
-      WebRTCService.hangUp()
+      WebRTCService.clear()
     }
   }, [roomId, handleData])
 
