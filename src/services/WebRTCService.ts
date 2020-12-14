@@ -14,17 +14,85 @@ interface ConstraintsType {
   audio?: boolean
 }
 
-interface Peer {
+interface PeerType {
   remoteId: string
-  remoteStream?: MediaStream
-  senders: RTCRtpSender[]
   peerConnection: RTCPeerConnection
-  sendChannel?: RTCDataChannel
+  useDataChannel: boolean
+  dataHandler: (value: string) => void
 }
 
 interface InitOption {
+  useDataChannel?: boolean
+  dataHandler?: (value: string) => void
+}
+
+class Peer {
+  remoteId: string
+  remoteStream: MediaStream | null
+  senders: RTCRtpSender[]
+  peerConnection: RTCPeerConnection
+  sendChannel: RTCDataChannel | null
+  receiveChannel: RTCDataChannel | null
   useDataChannel: boolean
   dataHandler: (value: string) => void
+
+  constructor({
+    remoteId,
+    peerConnection,
+    useDataChannel = false,
+    dataHandler = _.noop,
+  }: PeerType) {
+    this.remoteId = remoteId
+    this.remoteStream = null
+    this.senders = []
+    this.peerConnection = peerConnection
+    this.sendChannel = null
+    this.receiveChannel = null
+    this.useDataChannel = useDataChannel
+    this.dataHandler = dataHandler
+
+    if (useDataChannel) {
+      this.createDataChannel()
+    }
+  }
+
+  createDataChannel() {
+    this.sendChannel = this.peerConnection.createDataChannel(
+      this.getChannelName(this.remoteId),
+    )
+    this.peerConnection.ondatachannel = this.connectReceiveChannel.bind(this)
+  }
+
+  connectReceiveChannel(event: RTCDataChannelEvent) {
+    this.receiveChannel = event.channel
+    this.receiveChannel.onmessage = this.receiveData.bind(this)
+  }
+
+  receiveData(event: MessageEvent) {
+    this.dataHandler(event.data)
+  }
+
+  getChannelName(remoteId: string) {
+    return `channel-${remoteId}`
+  }
+
+  sendData(value: string) {
+    if (
+      !_.isNil(this.sendChannel) &&
+      this.sendChannel.readyState === DataChannelState.Open
+    ) {
+      this.sendChannel.send(value)
+    }
+  }
+
+  clear() {
+    this.sendChannel?.close()
+    this.receiveChannel?.close()
+    this.senders.forEach(sender => {
+      this.peerConnection.removeTrack(sender)
+    })
+    this.peerConnection.close()
+  }
 }
 
 class WebRTC {
@@ -55,23 +123,19 @@ class WebRTC {
     SocketService.emit(SocketEvent.Leave, roomId)
   }
 
-  /* peerconnection utils */
+  /* peer connection utils */
   createPeerConnection(remoteId: string): RTCPeerConnection {
     const peerConnection = new RTCPeerConnection()
-    const peer: Peer = { remoteId, senders: [], peerConnection }
-
-    if (this.useDataChannel) {
-      const sendChannel = peerConnection.createDataChannel(
-        this.getChannelName(remoteId),
-      )
-      _.set(peer, 'sendChannel', sendChannel)
-    }
+    const peer: Peer = new Peer({
+      remoteId,
+      peerConnection,
+      useDataChannel: this.useDataChannel,
+      dataHandler: this.dataHandler,
+    })
 
     this.peers.push(peer)
     this.waitRemoteStream(remoteId, peerConnection)
     this.waitLocalIceCandidate(remoteId, peerConnection)
-
-    peerConnection.ondatachannel = this.receiveChannel.bind(this)
 
     const { localStream } = this
 
@@ -190,39 +254,21 @@ class WebRTC {
   }
 
   getPeer(remoteId: string): Peer | undefined {
-    return this.peers.find(pc => pc.remoteId === remoteId)
+    return this.peers.find(peer => peer.remoteId === remoteId)
   }
 
   /* data channel utils */
   sendData(value: string) {
     if (!this.useDataChannel) {
-      Warn(
+      return Warn(
         `Cannot send data because data channel is not available. 
         Give the 'useDataChannel' prop as option of WebRTCService's init function`,
       )
     }
 
     this.peers.forEach(peer => {
-      const { sendChannel } = peer
-      if (
-        !_.isNil(sendChannel) &&
-        sendChannel.readyState === DataChannelState.Open
-      ) {
-        sendChannel.send(value)
-      }
+      peer.sendData(value)
     })
-  }
-
-  receiveChannel(event: RTCDataChannelEvent) {
-    event.channel.onmessage = this.receiveData.bind(this)
-  }
-
-  receiveData(event: MessageEvent) {
-    this.dataHandler(event.data)
-  }
-
-  getChannelName(remoteId: string) {
-    return `channel-${remoteId}`
   }
 
   /* local stream utils */
@@ -272,12 +318,7 @@ class WebRTC {
     this.localStream?.getTracks().forEach(track => track.stop())
     this.localStream = null
 
-    this.peers.forEach(pc => {
-      pc.senders.forEach(sender => {
-        pc.peerConnection.removeTrack(sender)
-      })
-      pc.peerConnection.close()
-    })
+    this.peers.forEach(peer => peer.clear())
     this.peers = []
   }
 
