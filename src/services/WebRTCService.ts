@@ -9,6 +9,12 @@ import DataChannelState from 'constants/DataChannelState'
 import SocketEvent from 'constants/SocketEvent'
 import { Warn, Error } from 'utils/consoleUtils'
 
+declare global {
+  interface Window {
+    webkitAudioContext: AudioContext
+  }
+}
+
 interface ConstraintsType {
   video?: boolean
   audio?: boolean
@@ -18,12 +24,16 @@ interface PeerType {
   remoteId: string
   peerConnection: RTCPeerConnection
   useDataChannel: boolean
-  dataHandler: (value: string) => void
+  useSoundMeter: boolean
+  dataHandler: (remoteId: string, value: string) => void
+  soundHandler: (remoteId: string, instant: number) => void
 }
 
 interface InitOption {
   useDataChannel?: boolean
-  dataHandler?: (value: string) => void
+  useSoundMeter?: boolean
+  dataHandler?: (remoteId: string, value: string) => void
+  soundHandler?: (remoteId: string, instant: number) => void
 }
 
 class Peer {
@@ -33,14 +43,22 @@ class Peer {
   peerConnection: RTCPeerConnection
   sendChannel: RTCDataChannel | null
   receiveChannel: RTCDataChannel | null
+  audioContext: AudioContext | null
+  script: ScriptProcessorNode | null
+
+  /* peer option */
   useDataChannel: boolean
-  dataHandler: (value: string) => void
+  useSoundMeter: boolean
+  dataHandler: (remoteId: string, value: string) => void
+  soundHandler: (remoteId: string, instant: number) => void
 
   constructor({
     remoteId,
     peerConnection,
     useDataChannel = false,
+    useSoundMeter = false,
     dataHandler = _.noop,
+    soundHandler = _.noop,
   }: PeerType) {
     this.remoteId = remoteId
     this.remoteStream = null
@@ -48,14 +66,24 @@ class Peer {
     this.peerConnection = peerConnection
     this.sendChannel = null
     this.receiveChannel = null
+    this.audioContext = null
+    this.script = null
+
     this.useDataChannel = useDataChannel
+    this.useSoundMeter = useSoundMeter
     this.dataHandler = dataHandler
+    this.soundHandler = soundHandler
 
     if (useDataChannel) {
       this.createDataChannel()
     }
+
+    if (useSoundMeter) {
+      this.createAudioContext()
+    }
   }
 
+  /* data channel utils */
   createDataChannel() {
     this.sendChannel = this.peerConnection.createDataChannel(
       this.getChannelName(this.remoteId),
@@ -69,7 +97,9 @@ class Peer {
   }
 
   receiveData(event: MessageEvent) {
-    this.dataHandler(event.data)
+    if (_.isFunction(this.dataHandler)) {
+      this.dataHandler(this.remoteId, event.data)
+    }
   }
 
   getChannelName(remoteId: string) {
@@ -82,6 +112,38 @@ class Peer {
       this.sendChannel.readyState === DataChannelState.Open
     ) {
       this.sendChannel.send(value)
+    }
+  }
+
+  /* sound meter utils */
+  createAudioContext() {
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    this.audioContext = new AudioContext()
+    this.script = this.audioContext.createScriptProcessor(2048, 1, 1)
+    this.script.onaudioprocess = _.throttle(
+      this.connectAudioProcess.bind(this),
+      200,
+    )
+  }
+
+  connectToSource(remoteStream: MediaStream) {
+    if (!_.isNil(this.audioContext) && !_.isNil(this.script)) {
+      const mic = this.audioContext.createMediaStreamSource(remoteStream)
+      mic.connect(this.script)
+      this.script.connect(this.audioContext.destination)
+    }
+  }
+
+  connectAudioProcess(event: AudioProcessingEvent) {
+    const input = event.inputBuffer.getChannelData(0)
+    let sum = 0
+    for (let i = 0; i < input.length; ++i) {
+      sum += input[i] * input[i]
+    }
+    const instant = Math.sqrt(sum / input.length)
+
+    if (_.isFunction(this.soundHandler)) {
+      this.soundHandler(this.remoteId, parseFloat(instant.toFixed(2)))
     }
   }
 
@@ -99,9 +161,16 @@ class WebRTC {
   localStream: MediaStream | null = null
   peers: Peer[] = []
   useDataChannel: boolean = false
-  dataHandler: (value: string) => void = _.noop
+  useSoundMeter: boolean = false
+  dataHandler: (remoteId: string, value: string) => void = _.noop
+  soundHandler: (remoteId: string, instant: number) => void = _.noop
 
-  init({ useDataChannel = false, dataHandler = _.noop }: InitOption) {
+  init({
+    useDataChannel = false,
+    useSoundMeter = false,
+    dataHandler = _.noop,
+    soundHandler = _.noop,
+  }: InitOption) {
     SocketService.on(SocketEvent.Enter, this.enterRemotePeer.bind(this))
     SocketService.on(SocketEvent.Leave, this.leaveRemotePeer.bind(this))
     SocketService.on(SocketEvent.Offer, this.waitOffer.bind(this))
@@ -112,7 +181,9 @@ class WebRTC {
     )
 
     this.useDataChannel = useDataChannel
+    this.useSoundMeter = useSoundMeter
     this.dataHandler = dataHandler
+    this.soundHandler = soundHandler
   }
 
   enter(roomId: string) {
@@ -130,7 +201,9 @@ class WebRTC {
       remoteId,
       peerConnection,
       useDataChannel: this.useDataChannel,
+      useSoundMeter: this.useSoundMeter,
       dataHandler: this.dataHandler,
+      soundHandler: this.soundHandler,
     })
 
     this.peers.push(peer)
@@ -223,6 +296,11 @@ class WebRTC {
 
       if (!_.isNil(peer)) {
         _.set(peer, 'remoteStream', remoteStream)
+
+        if (this.useSoundMeter) {
+          peer.connectToSource(remoteStream)
+        }
+
         this.dispatch(
           groundAction.createPeerConnection({
             remoteId,

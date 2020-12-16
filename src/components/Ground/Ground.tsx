@@ -26,6 +26,7 @@ function Ground({ roomId }: GroundProps) {
   const peerConnections = useSelector(getPeerConnections)
 
   const localVideoRef = useRef<HTMLVideoElement>(null)
+  const soundInstantsRef = useRef(Immutable.OrderedMap<string, number>())
 
   const [enableVideo, setEnableVideo] = useState(true)
   const [enableAudio, setEnableAudio] = useState(true)
@@ -63,7 +64,7 @@ function Ground({ roomId }: GroundProps) {
     ({ value }, { setSubmitting, resetForm }) => {
       try {
         WebRTCService.sendData(value)
-        setMessages(prev => prev.push(value))
+        setMessages(prev => prev.push({ value }))
         resetForm()
       } catch (error) {
         Error(error)
@@ -74,8 +75,12 @@ function Ground({ roomId }: GroundProps) {
     [],
   )
 
-  const handleData = useCallback((value: string) => {
-    setMessages(prev => prev.push(value))
+  const handleData = useCallback((remoteId: string, value: string) => {
+    setMessages(prev => prev.push({ id: remoteId, value }))
+  }, [])
+
+  const handleSound = useCallback((remoteId: string, instant: number) => {
+    soundInstantsRef.current = soundInstantsRef.current.set(remoteId, instant)
   }, [])
 
   const remoteVideos = useMemo(() => {
@@ -91,7 +96,10 @@ function Ground({ roomId }: GroundProps) {
   }, [peerConnections, handleInsertRemoteStream])
 
   const messageList = useMemo(
-    () => messages.map((message, index) => <div key={index}>{message}</div>),
+    () =>
+      messages.map((message, index) => (
+        <div key={index}>{`${message.id ?? '나'}: ${message.value}`}</div>
+      )),
     [messages],
   )
 
@@ -105,7 +113,12 @@ function Ground({ roomId }: GroundProps) {
               audio: true,
             },
           )
-          WebRTCService.init({ useDataChannel: true, dataHandler: handleData })
+          WebRTCService.init({
+            useDataChannel: true,
+            useSoundMeter: true,
+            dataHandler: handleData,
+            soundHandler: handleSound,
+          })
           WebRTCService.enter(roomId)
 
           if (WebRTCService.setAudio(false)) {
@@ -121,7 +134,7 @@ function Ground({ roomId }: GroundProps) {
       WebRTCService.leave(roomId)
       WebRTCService.clear()
     }
-  }, [roomId, handleData])
+  }, [roomId, handleData, handleSound])
 
   const formikConfig = useRef({
     initialValues: {
