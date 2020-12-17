@@ -45,6 +45,7 @@ class Peer {
   receiveChannel: RTCDataChannel | null
   audioContext: AudioContext | null
   script: ScriptProcessorNode | null
+  mic: MediaStreamAudioSourceNode | null
 
   /* peer option */
   useDataChannel: boolean
@@ -68,6 +69,7 @@ class Peer {
     this.receiveChannel = null
     this.audioContext = null
     this.script = null
+    this.mic = null
 
     this.useDataChannel = useDataChannel
     this.useSoundMeter = useSoundMeter
@@ -128,8 +130,8 @@ class Peer {
 
   connectToSource(remoteStream: MediaStream) {
     if (!_.isNil(this.audioContext) && !_.isNil(this.script)) {
-      const mic = this.audioContext.createMediaStreamSource(remoteStream)
-      mic.connect(this.script)
+      this.mic = this.audioContext.createMediaStreamSource(remoteStream)
+      this.mic.connect(this.script)
       this.script.connect(this.audioContext.destination)
     }
   }
@@ -154,6 +156,13 @@ class Peer {
       this.peerConnection.removeTrack(sender)
     })
     this.peerConnection.close()
+
+    if (!_.isNil(this.mic)) {
+      this.mic.disconnect()
+    }
+    if (!_.isNil(this.script)) {
+      this.script.disconnect()
+    }
   }
 }
 
@@ -250,9 +259,10 @@ class WebRTC {
   leaveRemotePeer(remoteId: string) {
     const peerIndex = this.peers.findIndex(peer => peer.remoteId === remoteId)
     if (peerIndex >= 0) {
+      this.peers[peerIndex].clear()
       this.peers.splice(peerIndex, 1)
+      this.dispatch(groundAction.deletePeerConnection({ remoteId }))
     }
-    this.dispatch(groundAction.deletePeerConnection({ remoteId }))
   }
 
   async waitOffer(
