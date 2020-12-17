@@ -22,6 +22,7 @@ interface ConstraintsType {
 
 interface PeerType {
   remoteId: string
+  senders: RTCRtpSender[]
   peerConnection: RTCPeerConnection
   useDataChannel: boolean
   useSoundMeter: boolean
@@ -38,14 +39,14 @@ interface InitOption {
 
 class Peer {
   remoteId: string
-  remoteStream: MediaStream | null
   senders: RTCRtpSender[]
   peerConnection: RTCPeerConnection
-  sendChannel: RTCDataChannel | null
-  receiveChannel: RTCDataChannel | null
-  audioContext: AudioContext | null
-  script: ScriptProcessorNode | null
-  mic: MediaStreamAudioSourceNode | null
+  remoteStream: MediaStream | null = null
+  sendChannel: RTCDataChannel | null = null
+  receiveChannel: RTCDataChannel | null = null
+  audioContext: AudioContext | null = null
+  script: ScriptProcessorNode | null = null
+  mic: MediaStreamAudioSourceNode | null = null
 
   /* peer option */
   useDataChannel: boolean
@@ -55,6 +56,7 @@ class Peer {
 
   constructor({
     remoteId,
+    senders,
     peerConnection,
     useDataChannel = false,
     useSoundMeter = false,
@@ -62,19 +64,18 @@ class Peer {
     soundHandler = _.noop,
   }: PeerType) {
     this.remoteId = remoteId
-    this.remoteStream = null
-    this.senders = []
+    this.senders = senders
     this.peerConnection = peerConnection
-    this.sendChannel = null
-    this.receiveChannel = null
-    this.audioContext = null
-    this.script = null
-    this.mic = null
 
     this.useDataChannel = useDataChannel
     this.useSoundMeter = useSoundMeter
     this.dataHandler = dataHandler
     this.soundHandler = soundHandler
+
+    this.peerConnection.ontrack = this.receiveRemoteStream.bind(this)
+    this.peerConnection.onicecandidate = this.receiveLocalIceCandidate.bind(
+      this,
+    )
 
     if (useDataChannel) {
       this.createDataChannel()
@@ -82,6 +83,32 @@ class Peer {
 
     if (useSoundMeter) {
       this.createAudioContext()
+    }
+  }
+
+  /* peer connection utils */
+  receiveRemoteStream(event: RTCTrackEvent) {
+    this.remoteStream = event.streams[0]
+    const { remoteId, remoteStream, peerConnection } = this
+
+    if (this.useSoundMeter) {
+      this.connectToSource(this.remoteStream)
+    }
+
+    this.dispatch(
+      groundAction.createPeerConnection({
+        remoteId,
+        remoteStream,
+        peerConnection,
+      }),
+    )
+  }
+
+  receiveLocalIceCandidate(event: RTCPeerConnectionIceEvent) {
+    const { candidate: iceCandidate } = event
+
+    if (!_.isNil(iceCandidate)) {
+      SocketService.emit(SocketEvent.IceCandidate, this.remoteId, iceCandidate)
     }
   }
 
@@ -104,10 +131,6 @@ class Peer {
     }
   }
 
-  getChannelName(remoteId: string) {
-    return `channel-${remoteId}`
-  }
-
   sendData(value: string) {
     if (
       !_.isNil(this.sendChannel) &&
@@ -115,6 +138,10 @@ class Peer {
     ) {
       this.sendChannel.send(value)
     }
+  }
+
+  getChannelName(remoteId: string) {
+    return `channel-${remoteId}`
   }
 
   /* sound meter utils */
@@ -126,14 +153,6 @@ class Peer {
       this.connectAudioProcess.bind(this),
       200,
     )
-  }
-
-  connectToSource(remoteStream: MediaStream) {
-    if (!_.isNil(this.audioContext) && !_.isNil(this.script)) {
-      this.mic = this.audioContext.createMediaStreamSource(remoteStream)
-      this.mic.connect(this.script)
-      this.script.connect(this.audioContext.destination)
-    }
   }
 
   connectAudioProcess(event: AudioProcessingEvent) {
@@ -149,20 +168,31 @@ class Peer {
     }
   }
 
+  connectToSource(remoteStream: MediaStream) {
+    if (!_.isNil(this.audioContext) && !_.isNil(this.script)) {
+      this.mic = this.audioContext.createMediaStreamSource(remoteStream)
+      this.mic.connect(this.script)
+      this.script.connect(this.audioContext.destination)
+    }
+  }
+
+  /* clear func */
   clear() {
-    this.sendChannel?.close()
-    this.receiveChannel?.close()
     this.senders.forEach(sender => {
       this.peerConnection.removeTrack(sender)
     })
     this.peerConnection.close()
+    this.remoteStream?.getTracks().forEach(track => track.stop())
 
-    if (!_.isNil(this.mic)) {
-      this.mic.disconnect()
-    }
-    if (!_.isNil(this.script)) {
-      this.script.disconnect()
-    }
+    this.sendChannel?.close()
+    this.receiveChannel?.close()
+    this.mic?.disconnect()
+    this.script?.disconnect()
+  }
+
+  /* dispatch action in redux */
+  dispatch(action) {
+    ReduxStore.dispatch(action)
   }
 }
 
@@ -182,11 +212,11 @@ class WebRTC {
   }: InitOption) {
     SocketService.on(SocketEvent.Enter, this.enterRemotePeer.bind(this))
     SocketService.on(SocketEvent.Leave, this.leaveRemotePeer.bind(this))
-    SocketService.on(SocketEvent.Offer, this.waitOffer.bind(this))
-    SocketService.on(SocketEvent.Answer, this.waitAnswer.bind(this))
+    SocketService.on(SocketEvent.Offer, this.receiveOffer.bind(this))
+    SocketService.on(SocketEvent.Answer, this.receiveAnswer.bind(this))
     SocketService.on(
       SocketEvent.IceCandidate,
-      this.waitRemoteIceCandidate.bind(this),
+      this.receiveRemoteIceCandidate.bind(this),
     )
 
     this.useDataChannel = useDataChannel
@@ -206,8 +236,19 @@ class WebRTC {
   /* peer connection utils */
   createPeerConnection(remoteId: string): RTCPeerConnection {
     const peerConnection = new RTCPeerConnection()
+    const senders: RTCRtpSender[] = []
+    const { localStream } = this
+
+    if (!_.isNil(localStream)) {
+      for (const track of localStream.getTracks()) {
+        const sender = peerConnection.addTrack(track, localStream)
+        senders.push(sender)
+      }
+    }
+
     const peer: Peer = new Peer({
       remoteId,
+      senders,
       peerConnection,
       useDataChannel: this.useDataChannel,
       useSoundMeter: this.useSoundMeter,
@@ -216,17 +257,6 @@ class WebRTC {
     })
 
     this.peers.push(peer)
-    this.waitRemoteStream(remoteId, peerConnection)
-    this.waitLocalIceCandidate(remoteId, peerConnection)
-
-    const { localStream } = this
-
-    if (!_.isNil(localStream)) {
-      for (const track of localStream.getTracks()) {
-        const sender = peerConnection.addTrack(track, localStream)
-        peer.senders.push(sender)
-      }
-    }
 
     return peerConnection
   }
@@ -258,6 +288,7 @@ class WebRTC {
 
   leaveRemotePeer(remoteId: string) {
     const peerIndex = this.peers.findIndex(peer => peer.remoteId === remoteId)
+
     if (peerIndex >= 0) {
       this.peers[peerIndex].clear()
       this.peers.splice(peerIndex, 1)
@@ -265,7 +296,7 @@ class WebRTC {
     }
   }
 
-  async waitOffer(
+  async receiveOffer(
     remoteId: string,
     remoteSessionDescription: RTCSessionDescriptionInit,
   ) {
@@ -285,7 +316,7 @@ class WebRTC {
     }
   }
 
-  waitAnswer(
+  receiveAnswer(
     remoteId: string,
     remoteSessionDescription: RTCSessionDescriptionInit,
   ) {
@@ -299,40 +330,7 @@ class WebRTC {
     }
   }
 
-  waitRemoteStream(remoteId: string, peerConnection: RTCPeerConnection) {
-    peerConnection.ontrack = (event: RTCTrackEvent) => {
-      const remoteStream = event.streams[0]
-      const peer = this.getPeer(remoteId)
-
-      if (!_.isNil(peer)) {
-        _.set(peer, 'remoteStream', remoteStream)
-
-        if (this.useSoundMeter) {
-          peer.connectToSource(remoteStream)
-        }
-
-        this.dispatch(
-          groundAction.createPeerConnection({
-            remoteId,
-            remoteStream,
-            peerConnection,
-          }),
-        )
-      }
-    }
-  }
-
-  waitLocalIceCandidate(remoteId: string, peerConnection: RTCPeerConnection) {
-    peerConnection.onicecandidate = (event: RTCPeerConnectionIceEvent) => {
-      const { candidate: iceCandidate } = event
-
-      if (!_.isNil(iceCandidate)) {
-        SocketService.emit(SocketEvent.IceCandidate, remoteId, iceCandidate)
-      }
-    }
-  }
-
-  waitRemoteIceCandidate(remoteId: string, iceCandidate: RTCIceCandidate) {
+  receiveRemoteIceCandidate(remoteId: string, iceCandidate: RTCIceCandidate) {
     const candidate = new RTCIceCandidate(iceCandidate)
     const peer = this.getPeer(remoteId)
 
@@ -396,6 +394,7 @@ class WebRTC {
     return true
   }
 
+  /* clear func */
   clear() {
     SocketService.off(SocketEvent.Enter)
     SocketService.off(SocketEvent.Leave)
