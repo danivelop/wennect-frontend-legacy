@@ -107,7 +107,7 @@ function Ground({ roomId }: GroundProps) {
     ;(async () => {
       try {
         if (!_.isNil(localVideoRef.current)) {
-          localVideoRef.current.srcObject = await WebRTCService.getLocalMediaStream(
+          localVideoRef.current.srcObject = await WebRTCService.getLocalUserMediaStream(
             {
               video: true,
               audio: true,
