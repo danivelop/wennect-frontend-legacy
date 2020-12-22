@@ -275,7 +275,6 @@ class WebRTC {
       }
 
       userMediaStream.getTracks().forEach(track => {
-        console.log(track)
         if (!_.isNil(this.localStream)) {
           const localTrack = this.localStream
             .getTracks()
@@ -358,10 +357,6 @@ class WebRTC {
     }
   }
 
-  endedScreenShare() {
-    this.getLocalUserMediaStream({ video: true })
-  }
-
   async enterRemotePeer(remoteId: string) {
     const peerConnection = this.createPeerConnection(remoteId)
 
@@ -425,6 +420,14 @@ class WebRTC {
 
     if (!_.isNil(peer)) {
       peer.peerConnection.addIceCandidate(candidate)
+    }
+  }
+
+  async endedScreenShare() {
+    try {
+      await this.getLocalUserMediaStream({ video: true })
+    } catch (error) {
+      Error(error)
     }
   }
 
