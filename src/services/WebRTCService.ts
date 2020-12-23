@@ -390,6 +390,7 @@ class WebRTC {
 
     if (!_.isNil(localTrack)) {
       this.localStream.removeTrack(localTrack)
+      localTrack.stop()
     }
     this.localStream.addTrack(track)
 
