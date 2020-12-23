@@ -275,29 +275,7 @@ class WebRTC {
       }
 
       userMediaStream.getTracks().forEach(track => {
-        if (!_.isNil(this.localStream)) {
-          const localTrack = this.localStream
-            .getTracks()
-            .find(localTrack => localTrack.kind === track.kind)
-
-          if (!_.isNil(localTrack)) {
-            this.localStream.removeTrack(localTrack)
-          }
-          this.localStream.addTrack(track)
-
-          this.peers.forEach(({ senders, peerConnection }) => {
-            const sender = senders.find(
-              sender => sender.track?.kind === track.kind,
-            )
-
-            if (!_.isNil(sender)) {
-              sender.replaceTrack(track)
-            } else {
-              const sender = peerConnection.addTrack(track, userMediaStream)
-              senders.push(sender)
-            }
-          })
-        }
+        this.upsertTrack(userMediaStream, track)
       })
 
       return this.localStream
@@ -318,38 +296,10 @@ class WebRTC {
         return (this.localStream = displayMediaStream)
       }
 
-      const localVideoTrack = this.localStream
-        .getVideoTracks()
-        .find(track => track.kind === 'video')
-
-      const displayVideoTrack = displayMediaStream
-        .getVideoTracks()
-        .find(track => track.kind === 'video')
-
-      if (!_.isNil(displayVideoTrack)) {
-        if (!_.isNil(localVideoTrack)) {
-          this.localStream.removeTrack(localVideoTrack)
-        }
-        this.localStream.addTrack(displayVideoTrack)
-
-        this.peers.forEach(({ senders, peerConnection }) => {
-          const videoSender = senders.find(
-            sender => sender.track?.kind === 'video',
-          )
-
-          if (!_.isNil(videoSender)) {
-            videoSender.replaceTrack(displayVideoTrack)
-          } else {
-            const sender = peerConnection.addTrack(
-              displayVideoTrack,
-              displayMediaStream,
-            )
-            senders.push(sender)
-          }
-        })
-
-        displayVideoTrack.onended = this.endedScreenShare.bind(this)
-      }
+      displayMediaStream.getTracks().forEach(track => {
+        this.upsertTrack(displayMediaStream, track)
+        track.onended = this.endedScreenShare.bind(this)
+      })
 
       return this.localStream
     } catch (error) {
@@ -429,6 +379,30 @@ class WebRTC {
     } catch (error) {
       Error(error)
     }
+  }
+
+  upsertTrack(stream: MediaStream, track: MediaStreamTrack) {
+    if (_.isNil(this.localStream)) return
+
+    const localTrack = this.localStream
+      .getTracks()
+      .find(localTrack => localTrack.kind === track.kind)
+
+    if (!_.isNil(localTrack)) {
+      this.localStream.removeTrack(localTrack)
+    }
+    this.localStream.addTrack(track)
+
+    this.peers.forEach(({ senders, peerConnection }) => {
+      const sender = senders.find(sender => sender.track?.kind === track.kind)
+
+      if (!_.isNil(sender)) {
+        sender.replaceTrack(track)
+      } else {
+        const sender = peerConnection.addTrack(track, stream)
+        senders.push(sender)
+      }
+    })
   }
 
   getPeer(remoteId: string): Peer | undefined {
