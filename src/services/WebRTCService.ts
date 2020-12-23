@@ -436,7 +436,7 @@ class WebRTC {
   }
 
   /* data channel utils */
-  sendData(value: string) {
+  sendDataToAll(value: string) {
     if (!this.useDataChannel) {
       return Warn(
         `Cannot send data because data channel is not available. 
@@ -447,6 +447,23 @@ class WebRTC {
     this.peers.forEach(peer => {
       peer.sendData(value)
     })
+  }
+
+  sendDataToSome(value: string, target: string | string[]) {
+    if (_.isArray(target)) {
+      this.peers.forEach(peer => {
+        if (target.includes(peer.remoteId)) {
+          peer.sendData(value)
+        }
+      })
+      return
+    }
+
+    const peer = this.peers.find(peer => peer.remoteId === target)
+
+    if (!_.isNil(peer)) {
+      peer.sendData(value)
+    }
   }
 
   /* local stream utils */
