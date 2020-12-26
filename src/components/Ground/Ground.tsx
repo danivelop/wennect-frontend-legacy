@@ -63,7 +63,7 @@ function Ground({ roomId }: GroundProps) {
   const handleSubmit = useCallback(
     ({ value }, { setSubmitting, resetForm }) => {
       try {
-        WebRTCService.sendDataToAll(value)
+        WebRTCService.sendData(value)
         setMessages(prev => prev.push({ value }))
         resetForm()
       } catch (error) {

@@ -411,20 +411,19 @@ class WebRTC {
   }
 
   /* data channel utils */
-  sendDataToAll(value: string) {
+  sendData(value: string, target?: string | string[]) {
     if (!this.useDataChannel) {
-      return Warn(
-        `Cannot send data because data channel is not available. 
-        Give the 'useDataChannel' prop as option of WebRTCService's init function`,
-      )
+      Warn(`Not allowed to use data channel. Give useDataChannel option`)
+      return
     }
 
-    this.peers.forEach(peer => {
-      peer.sendData(value)
-    })
-  }
+    if (_.isNil(target)) {
+      this.peers.forEach(peer => {
+        peer.sendData(value)
+      })
+      return
+    }
 
-  sendDataToSome(value: string, target: string | string[]) {
     if (_.isArray(target)) {
       this.peers.forEach(peer => {
         if (target.includes(peer.remoteId)) {
