@@ -45,9 +45,11 @@ class Peer {
   remoteStream?: MediaStream
   sendChannel?: RTCDataChannel
   receiveChannel?: RTCDataChannel
-  audioContext?: AudioContext
+  audioContext: AudioContext
   script?: ScriptProcessorNode
-  mic?: MediaStreamAudioSourceNode
+  mediaStreamSource?: MediaStreamAudioSourceNode
+  mediaStreamDestination: MediaStreamAudioDestinationNode
+  gainNode: GainNode
 
   /* peer option */
   useDataChannel: boolean
@@ -78,21 +80,36 @@ class Peer {
       this,
     )
 
+    const AudioContext = window.AudioContext || window.webkitAudioContext
+    this.audioContext = new AudioContext()
+    this.mediaStreamDestination = this.audioContext.createMediaStreamDestination()
+    this.gainNode = this.audioContext.createGain()
+
     if (useDataChannel) {
       this.createDataChannel()
     }
 
     if (useSoundMeter) {
-      this.createAudioContext()
+      this.createScript()
     }
   }
 
   /* peer connection utils */
   receiveRemoteStream(event: RTCTrackEvent) {
+    if (!_.isNil(this.remoteStream)) {
+      this.remoteStream.addTrack(event.track)
+
+      if (event.track.kind === 'audio') {
+        this.connectToSource(this.remoteStream)
+      }
+
+      return
+    }
+
     this.remoteStream = event.streams[0]
     const { remoteId, remoteStream, peerConnection } = this
 
-    if (this.useSoundMeter) {
+    if (event.track.kind === 'audio') {
       this.connectToSource(this.remoteStream)
     }
 
@@ -145,10 +162,8 @@ class Peer {
     return `channel-${remoteId}`
   }
 
-  /* sound meter utils */
-  createAudioContext() {
-    const AudioContext = window.AudioContext || window.webkitAudioContext
-    this.audioContext = new AudioContext()
+  /* sound utils */
+  createScript() {
     this.script = this.audioContext.createScriptProcessor(2048, 1, 1)
     this.script.onaudioprocess = _.throttle(
       this.connectAudioProcess.bind(this),
@@ -170,11 +185,24 @@ class Peer {
   }
 
   connectToSource(remoteStream: MediaStream) {
-    if (!_.isNil(this.audioContext) && !_.isNil(this.script)) {
-      this.mic = this.audioContext.createMediaStreamSource(remoteStream)
-      this.mic.connect(this.script)
-      this.script.connect(this.audioContext.destination)
+    try {
+      this.mediaStreamSource = this.audioContext.createMediaStreamSource(
+        remoteStream,
+      )
+      this.mediaStreamSource.connect(this.gainNode)
+      this.gainNode.connect(this.mediaStreamDestination)
+
+      if (this.useSoundMeter && !_.isNil(this.script)) {
+        this.mediaStreamSource.connect(this.script)
+        this.script.connect(this.audioContext.destination)
+      }
+    } catch (error) {
+      Error(error)
     }
+  }
+
+  setVolume(value: number) {
+    this.gainNode.gain.value = value
   }
 
   /* clear func */
@@ -187,7 +215,7 @@ class Peer {
 
     this.sendChannel?.close()
     this.receiveChannel?.close()
-    this.mic?.disconnect()
+    this.mediaStreamSource?.disconnect()
     this.script?.disconnect()
   }
 
@@ -418,9 +446,7 @@ class WebRTC {
     }
 
     if (_.isNil(target)) {
-      this.peers.forEach(peer => {
-        peer.sendData(value)
-      })
+      this.peers.forEach(peer => peer.sendData(value))
       return
     }
 
@@ -437,6 +463,29 @@ class WebRTC {
 
     if (!_.isNil(peer)) {
       peer.sendData(value)
+    }
+  }
+
+  /* sound utils */
+  setVolume(value: number = 1, target?: string | string[]) {
+    if (_.isNil(target)) {
+      this.peers.forEach(peer => peer.setVolume(value))
+      return
+    }
+
+    if (_.isArray(target)) {
+      this.peers.forEach(peer => {
+        if (target.includes(peer.remoteId)) {
+          peer.setVolume(value)
+        }
+      })
+      return
+    }
+
+    const peer = this.peers.find(peer => peer.remoteId === target)
+
+    if (!_.isNil(peer)) {
+      peer.setVolume(value)
     }
   }
 
