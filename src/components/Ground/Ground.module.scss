@@ -25,6 +25,7 @@ $REMOTE_VIDEO_HEIGHT: calc((100vh - 62px) * 186 / 1000);
         position: relative;
   
         .local-video {
+          width: 100%;
           height: 100%;
           background-color: $oc-black;
         }
