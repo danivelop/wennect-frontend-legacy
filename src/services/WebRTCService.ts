@@ -326,7 +326,6 @@ class WebRTC {
 
       displayMediaStream.getTracks().forEach(track => {
         this.upsertTrack(displayMediaStream, track)
-        track.onended = this.endedScreenShare.bind(this)
       })
 
       return this.localStream
@@ -398,14 +397,6 @@ class WebRTC {
 
     if (!_.isNil(peer)) {
       peer.peerConnection.addIceCandidate(candidate)
-    }
-  }
-
-  async endedScreenShare() {
-    try {
-      await this.getLocalUserMediaStream({ video: true })
-    } catch (error) {
-      Error(error)
     }
   }
 

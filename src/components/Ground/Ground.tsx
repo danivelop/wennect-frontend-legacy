@@ -30,6 +30,7 @@ function Ground({ roomId }: GroundProps) {
 
   const [enableVideo, setEnableVideo] = useState(true)
   const [enableAudio, setEnableAudio] = useState(true)
+  const [isSharing, setSharing] = useState(false)
   const [messages, setMessages] = useState(Immutable.List())
 
   const toggleVideo = useCallback(async () => {
@@ -47,6 +48,33 @@ function Ground({ roomId }: GroundProps) {
   const handleHangUp = useCallback(() => {
     history.goBack()
   }, [history])
+
+  const handleShare = useCallback(async () => {
+    if (_.isNil(localVideoRef.current)) {
+      return
+    }
+
+    try {
+      if (isSharing) {
+        localVideoRef.current.srcObject = await WebRTCService.getLocalUserMediaStream(
+          {
+            video: true,
+            audio: true,
+          },
+        )
+      } else {
+        localVideoRef.current.srcObject = await WebRTCService.getLocalDisplayMediaStream(
+          { video: true },
+        )
+      }
+
+      WebRTCService.setVideo(enableVideo)
+      WebRTCService.setAudio(enableAudio)
+      setSharing(prev => !prev)
+    } catch (error) {
+      Error(error)
+    }
+  }, [enableAudio, enableVideo, isSharing])
 
   const handleInsertRemoteStream = useCallback(
     (
@@ -181,6 +209,15 @@ function Ground({ roomId }: GroundProps) {
                   onClick={toggleAudio}
                 >
                   <SVGIcon name="audio" size={Size.Normal} />
+                </Button>
+              </li>
+              <li className={cx('item-wrapper')}>
+                <Button
+                  className={cx('option-item', { isSharing: isSharing })}
+                  shape={Shape.Circle}
+                  onClick={handleShare}
+                >
+                  <SVGIcon name="share" size={Size.Normal} />
                 </Button>
               </li>
             </ul>

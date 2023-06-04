@@ -50,7 +50,7 @@ $REMOTE_VIDEO_HEIGHT: calc((100vh - 62px) * 186 / 1000);
                 background-color: $oc-gray-4;
               }
     
-              &.disabled {
+              &.disabled, &.isSharing {
                 background-color: $oc-orange-9;
               }
     

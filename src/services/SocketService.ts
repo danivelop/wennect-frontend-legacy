@@ -10,7 +10,7 @@ class SockerService {
   private socket: Socket
 
   constructor() {
-    this.manager = new Manager('https://192.168.0.2:4000')
+    this.manager = new Manager('https://192.168.2.17:4000')
     this.socket = this.manager.socket('/')
   }
 
