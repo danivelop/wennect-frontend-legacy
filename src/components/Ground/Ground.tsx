@@ -190,7 +190,7 @@ function Ground({ roomId }: GroundProps) {
                   shape={Shape.Circle}
                   onClick={toggleVideo}
                 >
-                  <SVGIcon name="video" size={Size.Normal} />
+                  <SVGIcon name="video" size={Size.XSmall} />
                 </Button>
               </li>
               <li className={cx('item-wrapper')}>
@@ -199,7 +199,7 @@ function Ground({ roomId }: GroundProps) {
                   shape={Shape.Circle}
                   onClick={handleHangUp}
                 >
-                  <SVGIcon name="phone" size={Size.Normal} />
+                  <SVGIcon name="phone" size={Size.XSmall} />
                 </Button>
               </li>
               <li className={cx('item-wrapper')}>
@@ -208,7 +208,7 @@ function Ground({ roomId }: GroundProps) {
                   shape={Shape.Circle}
                   onClick={toggleAudio}
                 >
-                  <SVGIcon name="audio" size={Size.Normal} />
+                  <SVGIcon name="audio" size={Size.XSmall} />
                 </Button>
               </li>
               <li className={cx('item-wrapper')}>
@@ -217,40 +217,43 @@ function Ground({ roomId }: GroundProps) {
                   shape={Shape.Circle}
                   onClick={handleShare}
                 >
-                  <SVGIcon name="share" size={Size.Normal} />
+                  <SVGIcon name="share" size={Size.XSmall} />
                 </Button>
               </li>
             </ul>
           </div>
           <div className={cx('remote-video-wrapper')}>{remoteVideos}</div>
         </div>
-        <div className={cx('chat-area')}>
-          <div className={cx('messenger-stream')}>{messageList}</div>
-          <div className={cx('message-input-wrapper')}>
-            <Formik {...formikConfig.current}>
-              {({ dirty, isSubmitting }) => (
-                <>
-                  <Form className={cx('message-form')}>
-                    <Field
-                      className={cx('message-input')}
-                      name="value"
-                      type="text"
-                      placeholder=""
-                      autoComplete="off"
-                    />
-                    <Button
-                      className={cx('submit-button')}
-                      disabled={!dirty}
-                      loading={isSubmitting}
-                      type="submit"
-                    >
-                      Send
-                    </Button>
-                  </Form>
-                </>
-              )}
-            </Formik>
+        <div className={cx('option-area')}>
+          <div className={cx('chat-area')}>
+            <div className={cx('messenger-stream')}>{messageList}</div>
+            <div className={cx('message-input-wrapper')}>
+              <Formik {...formikConfig.current}>
+                {({ dirty, isSubmitting }) => (
+                  <>
+                    <Form className={cx('message-form')}>
+                      <Field
+                        className={cx('message-input')}
+                        name="value"
+                        type="text"
+                        placeholder=""
+                        autoComplete="off"
+                      />
+                      <Button
+                        className={cx('submit-button')}
+                        disabled={!dirty}
+                        loading={isSubmitting}
+                        type="submit"
+                      >
+                        Send
+                      </Button>
+                    </Form>
+                  </>
+                )}
+              </Formik>
+            </div>
           </div>
+          <div className={cx('devices-area')}></div>
         </div>
       </div>
     </div>

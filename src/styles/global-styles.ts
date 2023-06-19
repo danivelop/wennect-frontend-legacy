@@ -27,7 +27,6 @@ export const GlobalStyle = createGlobalStyle`
     display: block;
   }
   body {
-    min-width: 1200px;
     line-height: 1;
   }
   ol, ul {
@@ -49,5 +48,11 @@ export const GlobalStyle = createGlobalStyle`
     display: block;
     color: inherit;
     text-decoration: none;
+  }
+  button {
+    padding: 0;
+  }
+  html, body, #root {
+    height: 100%;
   }
 `

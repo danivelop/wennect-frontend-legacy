@@ -1,10 +1,8 @@
 @import '~Styles/colors';
 
-$REMOTE_VIDEO_HEIGHT: calc((100vh - 62px) * 186 / 1000);
-
 .ground-container {
   width: 100%;
-  height: calc(100vh - 62px);
+  height: calc(100% - 62px);
   background-color: $oc-black;
 
   .ground-wrapper {
@@ -15,31 +13,28 @@ $REMOTE_VIDEO_HEIGHT: calc((100vh - 62px) * 186 / 1000);
     .video-area {
       display: flex;
       flex-direction: column;
-      width: calc((100vh - 62px - 150px) * 4 / 3);
+      width: 70%;
 
       .local-video-wrapper {
-        display: flex;
-        justify-content: center;
         width: 100%;
-        height: calc((100vh - 62px) * 814 / 1000);
-        position: relative;
+        height: 80%;
   
         .local-video {
           width: 100%;
-          height: 100%;
+          height: 85%;
           background-color: $oc-black;
         }
 
         .option-menu {
           display: flex;
-          position: absolute;
-          bottom: 20px;
-          left: 50%;
-          transform: translateX(-50%);
+          align-items: center;
+          justify-content: center;
+          width: 100%;
+          height: 15%;
     
           .item-wrapper {
-            width: 50px;
-            height: 50px;
+            width: 30px;
+            height: 30px;
     
             .option-item {
               width: 100%;
@@ -67,57 +62,76 @@ $REMOTE_VIDEO_HEIGHT: calc((100vh - 62px) * 186 / 1000);
       }
   
       .remote-video-wrapper {
+        display: flex;
         width: 100%;
-        height: $REMOTE_VIDEO_HEIGHT;
+        height: 20%;
+        padding: 10px;
+        box-sizing: border-box;
         overflow-x: scroll;
 
         .remote-video {
           height: 100%;
           background-color: $oc-black;
         }
+
+        .remote-video + .remote-video {
+          padding-left: 10px;
+        }
       }
     }
 
-    .chat-area {
-      display: flex;
-      flex-direction: column;
-      flex: 1;
-      height: 100%;
-      background-color: $oc-white;
+    .option-area {
+      width: 30%;
       
-      .messenger-stream {
-        flex: 1;
-        overflow-y: scroll;
-      }
-
-      .message-input-wrapper {
+      .chat-area {
+        display: flex;
+        flex-direction: column;
         width: 100%;
-        height: 42px;
-        align-self: flex-end;
-        border-top: 1px solid $oc-gray-3;
-
-        .message-form {
-          display: flex;
-          align-items: center;
+        height: 80%;
+        background-color: $oc-white;
+        
+        .messenger-stream {
+          flex: 1;
+          overflow-y: scroll;
+        }
+  
+        .message-input-wrapper {
           width: 100%;
-          height: 100%;
-
-          .message-input {
-            flex: 1;
+          height: 5%;
+          box-sizing: border-box;
+          border: 1px solid $oc-gray-3;
+  
+          .message-form {
+            display: flex;
+            align-items: center;
+            width: 100%;
             height: 100%;
-            padding: 0 10px;
-            box-sizing: border-box;
-            border: 0;
-            outline: none;
-          }
-
-          .submit-button {
-            width: 50px;
-            height: 100%;
-            color: $oc-white;
-            background-color: $oc-blue-5;
+  
+            .message-input {
+              width: 80%;
+              height: 100%;
+              padding: 0 10px;
+              box-sizing: border-box;
+              border: 0;
+              outline: none;
+            }
+  
+            .submit-button {
+              width: 20%;
+              height: 100%;
+              font-size: 6px;
+              color: $oc-white;
+              background-color: $oc-blue-5;
+            }
           }
         }
+      }
+
+      .devices-area {
+        width: 100%;
+        height: 20%;
+        overflow-y: auto;
+        background-color: white;
       }
     }
   }
