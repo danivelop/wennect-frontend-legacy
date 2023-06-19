@@ -12,7 +12,7 @@ function GroundList() {
   const history = useHistory()
 
   const handleCreateRoom = useCallback(() => {
-    history.push('/ground/1')
+    history.push('/1')
   }, [history])
 
   return (
