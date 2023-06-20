@@ -33,6 +33,11 @@ function Ground({ roomId }: GroundProps) {
   const [isSharing, setSharing] = useState(false)
   const [messages, setMessages] = useState(Immutable.List())
 
+  const [audioInputs, setAudioInputs] = useState<MediaDeviceInfo[]>([])
+  const [videoInputs, setVideoInputs] = useState<MediaDeviceInfo[]>([])
+  const [audioOutputs, setAudioOutputs] = useState<MediaDeviceInfo[]>([])
+  const [deviceIds, setDeviceIds] = useState<(string | undefined)[]>([])
+
   const toggleVideo = useCallback(async () => {
     if (WebRTCService.setVideo(!enableVideo)) {
       setEnableVideo(prev => !prev)
@@ -75,6 +80,22 @@ function Ground({ roomId }: GroundProps) {
       Error(error)
     }
   }, [enableAudio, enableVideo, isSharing])
+
+  const handleChangeDevice = useCallback(
+    async (deviceInfo: MediaDeviceInfo) => {
+      try {
+        if (!_.isNil(localVideoRef.current)) {
+          localVideoRef.current.srcObject = await WebRTCService.changeDevice(
+            deviceInfo,
+          )
+          setDeviceIds(WebRTCService.getDeviceIds())
+        }
+      } catch (error) {
+        Error(error)
+      }
+    },
+    [],
+  )
 
   const handleInsertRemoteStream = useCallback(
     (
@@ -142,6 +163,7 @@ function Ground({ roomId }: GroundProps) {
             },
           )
           WebRTCService.init({
+            localVideoElement: localVideoRef.current,
             useDataChannel: true,
             useSoundMeter: true,
             dataHandler: handleData,
@@ -152,6 +174,7 @@ function Ground({ roomId }: GroundProps) {
           if (WebRTCService.setAudio(false)) {
             setEnableAudio(false)
           }
+          setDeviceIds(WebRTCService.getDeviceIds())
         }
       } catch (error) {
         Error(error)
@@ -163,6 +186,37 @@ function Ground({ roomId }: GroundProps) {
       WebRTCService.clear()
     }
   }, [roomId, handleData, handleSound])
+
+  useEffect(() => {
+    async function handleEnumerateDevices() {
+      try {
+        const {
+          videoInputs,
+          audioInputs,
+          audioOutputs,
+        } = await WebRTCService.getEnumerateDevices()
+
+        setVideoInputs(videoInputs)
+        setAudioInputs(audioInputs)
+        setAudioOutputs(audioOutputs)
+      } catch (error) {
+        Error(error)
+      }
+    }
+
+    handleEnumerateDevices()
+    window.navigator.mediaDevices.addEventListener(
+      'devicechange',
+      handleEnumerateDevices,
+    )
+
+    return () => {
+      window.navigator.mediaDevices.removeEventListener(
+        'devicechange',
+        handleEnumerateDevices,
+      )
+    }
+  }, [])
 
   const formikConfig = useRef({
     initialValues: {
@@ -253,7 +307,50 @@ function Ground({ roomId }: GroundProps) {
               </Formik>
             </div>
           </div>
-          <div className={cx('devices-area')}></div>
+          <div className={cx('devices-area')}>
+            <div className={cx('device-list')}>
+              <h3 className={cx('device-list-title')}>video input</h3>
+              {videoInputs.map(deviceInfo => (
+                <div
+                  key={deviceInfo.deviceId}
+                  className={cx('device-item', {
+                    selected: deviceIds.includes(deviceInfo.deviceId),
+                  })}
+                  onClick={() => handleChangeDevice(deviceInfo)}
+                >
+                  label: {deviceInfo.label}
+                </div>
+              ))}
+            </div>
+            <div className={cx('device-list')}>
+              <h3 className={cx('device-list-title')}>audio input</h3>
+              {audioInputs.map(deviceInfo => (
+                <div
+                  key={deviceInfo.deviceId}
+                  className={cx('device-item', {
+                    selected: deviceIds.includes(deviceInfo.deviceId),
+                  })}
+                  onClick={() => handleChangeDevice(deviceInfo)}
+                >
+                  label: {deviceInfo.label}
+                </div>
+              ))}
+            </div>
+            <div className={cx('device-list')}>
+              <h3 className={cx('device-list-title')}>audio output</h3>
+              {audioOutputs.map(deviceInfo => (
+                <div
+                  key={deviceInfo.deviceId}
+                  className={cx('device-item', {
+                    selected: deviceIds.includes(deviceInfo.deviceId),
+                  })}
+                  onClick={() => handleChangeDevice(deviceInfo)}
+                >
+                  label: {deviceInfo.label}
+                </div>
+              ))}
+            </div>
+          </div>
         </div>
       </div>
     </div>

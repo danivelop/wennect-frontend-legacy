@@ -110,7 +110,7 @@
             .message-input {
               width: 80%;
               height: 100%;
-              padding: 0 10px;
+              font-size: 16px;
               box-sizing: border-box;
               border: 0;
               outline: none;
@@ -132,6 +132,24 @@
         height: 20%;
         overflow-y: auto;
         background-color: white;
+
+        .device-list-title {
+          font-weight: bolder;
+          font-size: 18px;
+        }
+
+        .device-item {
+          padding: 5px 8px;
+          font-size: 14px;
+
+          &.selected {
+            background-color: rgb(200, 200, 200);
+          }
+        }
+
+        .device-list + .device-list {
+          margin-top: 20px;
+        }
       }
     }
   }

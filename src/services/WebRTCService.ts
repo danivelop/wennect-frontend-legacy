@@ -32,10 +32,15 @@ interface PeerType {
 }
 
 interface InitOption {
+  localVideoElement: HTMLVideoElement
   useDataChannel?: boolean
   useSoundMeter?: boolean
   dataHandler?: (remoteId: string, value: string) => void
   soundHandler?: (remoteId: string, instant: number) => void
+}
+
+interface CustomVideoElement extends HTMLVideoElement {
+  setSinkId?(sinkId: string): Promise<void>
 }
 
 class Peer {
@@ -227,6 +232,7 @@ class Peer {
 
 class WebRTC {
   localStream: MediaStream | null = null
+  localVideoElement: HTMLVideoElement | null = null
   peers: Peer[] = []
   useDataChannel: boolean = false
   useSoundMeter: boolean = false
@@ -234,6 +240,7 @@ class WebRTC {
   soundHandler: (remoteId: string, instant: number) => void = _.noop
 
   init({
+    localVideoElement,
     useDataChannel = false,
     useSoundMeter = false,
     dataHandler = _.noop,
@@ -248,6 +255,7 @@ class WebRTC {
       this.receiveRemoteIceCandidate.bind(this),
     )
 
+    this.localVideoElement = localVideoElement
     this.useDataChannel = useDataChannel
     this.useSoundMeter = useSoundMeter
     this.dataHandler = dataHandler
@@ -327,6 +335,91 @@ class WebRTC {
       displayMediaStream.getTracks().forEach(track => {
         this.upsertTrack(displayMediaStream, track)
       })
+
+      return this.localStream
+    } catch (error) {
+      throw error
+    }
+  }
+
+  async getEnumerateDevices() {
+    try {
+      const enumerateDevices = await window.navigator.mediaDevices.enumerateDevices()
+
+      const videoInputs = enumerateDevices.filter(
+        deviceInfo => deviceInfo.kind === 'videoinput',
+      )
+      const audioInputs = enumerateDevices.filter(
+        deviceInfo => deviceInfo.kind === 'audioinput',
+      )
+      const audioOutputs = enumerateDevices.filter(
+        deviceInfo => deviceInfo.kind === 'audiooutput',
+      )
+
+      return {
+        videoInputs,
+        audioInputs,
+        audioOutputs,
+      }
+    } catch (error) {
+      throw error
+    }
+  }
+
+  getDeviceIds() {
+    if (!this.localStream) {
+      return []
+    }
+
+    return this.localStream
+      .getTracks()
+      .map(track => track.getSettings().deviceId)
+  }
+
+  async changeDevice(deviceInfo: MediaDeviceInfo) {
+    try {
+      if (_.isNil(this.localStream)) {
+        return this.localStream
+      }
+
+      const deviceIds = this.getDeviceIds()
+
+      if (deviceIds.includes(deviceInfo.deviceId)) {
+        return this.localStream
+      }
+
+      const videoTrack = this.localStream.getVideoTracks()[0]
+      const audioTrack = this.localStream.getAudioTracks()[0]
+
+      if (deviceInfo.kind === 'videoinput') {
+        await this.getLocalUserMediaStream({
+          video: {
+            deviceId: { exact: deviceInfo.deviceId },
+          },
+          audio: audioTrack.enabled
+            ? {
+                deviceId: { exact: audioTrack.getSettings().deviceId },
+              }
+            : false,
+        })
+      } else if (deviceInfo.kind === 'audioinput') {
+        await this.getLocalUserMediaStream({
+          video: videoTrack.enabled
+            ? {
+                deviceId: { exact: videoTrack.getSettings().deviceId },
+              }
+            : false,
+          audio: {
+            deviceId: { exact: deviceInfo.deviceId },
+          },
+        })
+      } else if (deviceInfo.kind === 'audiooutput') {
+        if (this.localVideoElement) {
+          ;(this.localVideoElement as CustomVideoElement).setSinkId?.(
+            deviceInfo.deviceId,
+          )
+        }
+      }
 
       return this.localStream
     } catch (error) {
