@@ -77,6 +77,7 @@ function Ground({ roomId }: GroundProps) {
       WebRTCService.setAudio(enableAudio)
       setSharing(prev => !prev)
     } catch (error) {
+      alert(error)
       Error(error)
     }
   }, [enableAudio, enableVideo, isSharing])
